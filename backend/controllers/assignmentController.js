@@ -1,0 +1,205 @@
+const Assignment = require('../models/Assignment');
+const Submission = require('../models/Submission');
+const Lesson = require('../models/Lesson');
+
+// @desc    Create assignment for a lesson
+// @route   POST /api/assignments
+// @access  Private (Instructor/Admin)
+const createAssignment = async (req, res, next) => {
+  try {
+    const { lessonId, title, instructions, totalMarks, dueDate } = req.body;
+
+    if (!lessonId || !title || !instructions) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide lessonId, title, and instructions',
+      });
+    }
+
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      return res.status(404).json({ success: false, message: 'Lesson not found' });
+    }
+
+    const assignment = await Assignment.create({
+      lessonId,
+      title,
+      instructions,
+      totalMarks: totalMarks || 100,
+      dueDate: dueDate || null,
+    });
+
+    lesson.type = 'assignment';
+    await lesson.save();
+
+    res.status(201).json({
+      success: true,
+      data: assignment,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get assignment by lesson ID
+// @route   GET /api/assignments/lesson/:lessonId
+// @access  Private
+const getAssignmentByLesson = async (req, res, next) => {
+  try {
+    const { lessonId } = req.params;
+
+    const assignment = await Assignment.findOne({ lessonId });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'No assignment found for this lesson',
+      });
+    }
+
+    // Check if student has already submitted
+    let studentSubmission = null;
+    if (req.user) {
+      studentSubmission = await Submission.findOne({
+        assignmentId: assignment._id,
+        studentId: req.user._id,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        assignment,
+        submission: studentSubmission,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Submit assignment (file upload / file URL & notes)
+// @route   POST /api/assignments/:assignmentId/submit
+// @access  Private (Student)
+const submitAssignment = async (req, res, next) => {
+  try {
+    const { assignmentId } = req.params;
+    const { notes } = req.body;
+    const studentId = req.user._id;
+
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    // Determine file URL (from Multer upload file path or body URL)
+    let fileUrl = req.body.fileUrl;
+    if (req.file) {
+      fileUrl = `/uploads/assignments/${req.file.filename}`;
+    }
+
+    if (!fileUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide or upload a submission file',
+      });
+    }
+
+    // Check if submission already exists, update or create
+    let submission = await Submission.findOne({ assignmentId, studentId });
+
+    if (submission) {
+      submission.fileUrl = fileUrl;
+      submission.notes = notes || submission.notes;
+      submission.status = 'Submitted';
+      await submission.save();
+    } else {
+      submission = await Submission.create({
+        assignmentId,
+        studentId,
+        fileUrl,
+        notes: notes || '',
+        status: 'Submitted',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Assignment submitted successfully',
+      data: submission,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get submissions for an assignment
+// @route   GET /api/assignments/:assignmentId/submissions
+// @access  Private (Instructor/Admin)
+const getAssignmentSubmissions = async (req, res, next) => {
+  try {
+    const { assignmentId } = req.params;
+
+    const submissions = await Submission.find({ assignmentId })
+      .populate('studentId', 'name email avatar')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: submissions.length,
+      data: submissions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Grade assignment submission
+// @route   PUT /api/submissions/:submissionId/grade
+// @access  Private (Instructor/Admin)
+const gradeSubmission = async (req, res, next) => {
+  try {
+    const { submissionId } = req.params;
+    const { marks, feedback, status } = req.body;
+
+    let submission = await Submission.findById(submissionId).populate(
+      'assignmentId'
+    );
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Submission not found',
+      });
+    }
+
+    if (marks !== undefined) {
+      if (marks < 0 || marks > submission.assignmentId.totalMarks) {
+        return res.status(400).json({
+          success: false,
+          message: `Marks must be between 0 and ${submission.assignmentId.totalMarks}`,
+        });
+      }
+      submission.marks = marks;
+    }
+
+    if (feedback !== undefined) submission.feedback = feedback;
+    submission.status = status || 'Graded';
+
+    await submission.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Submission graded successfully',
+      data: submission,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  createAssignment,
+  getAssignmentByLesson,
+  submitAssignment,
+  getAssignmentSubmissions,
+  gradeSubmission,
+};

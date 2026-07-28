@@ -11,6 +11,13 @@ dotenv.config();
 
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const courseRoutes = require('./routes/courseRoutes');
+const enrolmentRoutes = require('./routes/enrolmentRoutes');
+const quizRoutes = require('./routes/quizRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
+const certificateRoutes = require('./routes/certificateRoutes');
+
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 // Connect to MongoDB
@@ -44,6 +51,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/enrolments', enrolmentRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/certificates', certificateRoutes);
 
 // Health check endpoint
 app.use('/api/health', (req, res) => {
