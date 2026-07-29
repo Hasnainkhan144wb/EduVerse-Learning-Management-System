@@ -5,7 +5,8 @@ import { useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import CoursesPage from './pages/CoursesPage';
+import BrowseCourses from './pages/BrowseCourses';
+import CourseDetails from './pages/CourseDetails';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 import RoleBaseRoute from './routes/RoleBaseRoute';
@@ -15,7 +16,9 @@ import InstructorLayout from './layouts/InstructorLayout';
 import AdminLayout from './layouts/AdminLayout';
 
 import StudentDashboard from './student/StudentDashboard';
+import MyCourses from './student/MyCourses';
 import CoursePlayer from './student/CoursePlayer';
+import Checkout from './student/Checkout';
 import StudentCertificates from './student/StudentCertificates';
 
 import InstructorDashboard from './instructor/InstructorDashboard';
@@ -50,9 +53,19 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/courses" element={<CoursesPage />} />
+      <Route path="/courses" element={<BrowseCourses />} />
+      <Route path="/courses/:id" element={<CourseDetails />} />
 
-      {/* Standalone Protected Course Player */}
+      {/* Standalone Protected Checkout & Course Player */}
+      <Route
+        path="/checkout/:courseId"
+        element={
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/course-player/:courseId"
         element={
@@ -74,7 +87,8 @@ function App() {
         }
       >
         <Route index element={<StudentDashboard />} />
-        <Route path="courses" element={<StudentDashboard />} />
+        <Route path="courses" element={<MyCourses />} />
+        <Route path="my-courses" element={<MyCourses />} />
         <Route path="wishlist" element={<StudentDashboard />} />
         <Route path="certificates" element={<StudentCertificates />} />
       </Route>
