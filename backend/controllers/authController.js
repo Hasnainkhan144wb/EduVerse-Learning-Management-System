@@ -29,7 +29,7 @@ const registerUser = async (req, res, next) => {
     const validRoles = ['Student', 'Instructor', 'Admin'];
     const userRole = validRoles.includes(role) ? role : 'Student';
 
-    // If role is Instructor, default isApproved to true or false based on setup
+    // Default instructor approval status
     const isApproved = userRole === 'Instructor' ? true : true;
 
     // Create user
@@ -44,7 +44,7 @@ const registerUser = async (req, res, next) => {
 
     const token = generateToken(user._id, user.role);
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: {
         _id: user._id,
@@ -57,7 +57,14 @@ const registerUser = async (req, res, next) => {
       },
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') {
+      next(error);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal Server Error',
+      });
+    }
   }
 };
 
@@ -96,7 +103,7 @@ const loginUser = async (req, res, next) => {
 
     const token = generateToken(user._id, user.role);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         _id: user._id,
@@ -109,7 +116,14 @@ const loginUser = async (req, res, next) => {
       },
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') {
+      next(error);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal Server Error',
+      });
+    }
   }
 };
 
@@ -123,12 +137,19 @@ const getMe = async (req, res, next) => {
       .populate('enrolledCourses', 'title thumbnail progressPercentage')
       .populate('createdCourses', 'title thumbnail status price');
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: user,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') {
+      next(error);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal Server Error',
+      });
+    }
   }
 };
 
@@ -148,7 +169,7 @@ const forgotPassword = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(444 || 404).json({
+      return res.status(404).json({
         success: false,
         message: 'There is no user registered with that email address',
       });
@@ -158,14 +179,20 @@ const forgotPassword = async (req, res, next) => {
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
 
-    // Return token in response (useful for development/testing environments)
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Password reset token generated successfully',
       resetToken,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') {
+      next(error);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal Server Error',
+      });
+    }
   }
 };
 
@@ -209,13 +236,20 @@ const resetPassword = async (req, res, next) => {
 
     const token = generateToken(user._id, user.role);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Password reset successfully',
       token,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') {
+      next(error);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal Server Error',
+      });
+    }
   }
 };
 
