@@ -18,6 +18,8 @@ const quizRoutes = require('./routes/quizRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 
+const { protect, authorize } = require('./middleware/authMiddleware');
+const { getInstructorStudents } = require('./controllers/enrolmentController');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 // Connect to MongoDB
@@ -57,6 +59,9 @@ app.use('/api/enrolments', enrolmentRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
+
+// Direct Instructor Students Endpoint Alias
+app.get('/api/instructor/students', protect, authorize('Instructor', 'Admin'), getInstructorStudents);
 
 // Health check endpoint
 app.use('/api/health', (req, res) => {

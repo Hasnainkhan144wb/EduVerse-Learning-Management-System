@@ -12,6 +12,7 @@ import {
   FiCheckSquare,
   FiFolder,
   FiUserCheck,
+  FiFileText,
 } from 'react-icons/fi';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -28,6 +29,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'Dashboard', path: '/instructor', icon: FiGrid },
     { label: 'My Courses', path: '/instructor/courses', icon: FiBookOpen },
     { label: 'Create Course', path: '/instructor/courses/create', icon: FiPlusCircle },
+    { label: 'Enrolled Students', path: '/instructor/students', icon: FiUsers },
+    { label: 'Assignments', path: '/instructor/assignments/manage', icon: FiFileText },
     { label: 'Analytics', path: '/instructor/analytics', icon: FiBarChart2 },
   ];
 

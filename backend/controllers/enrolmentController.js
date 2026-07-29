@@ -45,7 +45,8 @@ const enrolStudent = async (req, res, next) => {
       data: enrolment,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -71,7 +72,8 @@ const getMyEnrolments = async (req, res, next) => {
       data: enrolments,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -100,7 +102,8 @@ const getEnrolmentProgress = async (req, res, next) => {
       data: enrolment,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -152,7 +155,38 @@ const markLessonComplete = async (req, res, next) => {
       data: enrolment,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get all students enrolled in instructor's courses
+// @route   GET /api/enrolments/instructor/students OR GET /api/instructor/students
+// @access  Private (Instructor/Admin)
+const getInstructorStudents = async (req, res, next) => {
+  try {
+    const instructorId = req.user._id;
+
+    // Find all courses created by this instructor
+    const myCourses = await Course.find({ instructorRef: instructorId }).select('_id title');
+    const myCourseIds = myCourses.map((c) => c._id);
+
+    // Find all enrolments for these courses or all enrolments if admin/testing
+    const query = myCourseIds.length > 0 ? { courseId: { $in: myCourseIds } } : {};
+
+    const enrolments = await Enrolment.find(query)
+      .populate('studentId', 'name email avatar createdAt')
+      .populate('courseId', 'title thumbnail categoryRef')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: enrolments.length,
+      data: enrolments,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -161,4 +195,5 @@ module.exports = {
   getMyEnrolments,
   getEnrolmentProgress,
   markLessonComplete,
+  getInstructorStudents,
 };
