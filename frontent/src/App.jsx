@@ -2,6 +2,11 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
+import Home from './pages/Home';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import CoursesPage from './pages/CoursesPage';
+
 import ProtectedRoute from './routes/ProtectedRoute';
 import RoleBaseRoute from './routes/RoleBaseRoute';
 
@@ -20,32 +25,28 @@ import InstructorAnalytics from './instructor/InstructorAnalytics';
 import AdminDashboard from './admin/AdminDashboard';
 
 function App() {
-  const { isAuthenticated, role, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-400 text-sm font-medium">Initializing EduVerse LMS...</p>
         </div>
       </div>
     );
   }
 
-  const getDefaultRedirect = () => {
-    if (!isAuthenticated) return '/login';
-    if (role === 'Instructor') return '/instructor';
-    if (role === 'Admin') return '/admin';
-    return '/student';
-  };
-
   return (
     <Routes>
-      {/* Root redirect based on role */}
-      <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
+      {/* Public Pages */}
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/courses" element={<CoursesPage />} />
 
-      {/* Student Course Player (Standalone View) */}
+      {/* Standalone Protected Course Player */}
       <Route
         path="/course-player/:courseId"
         element={
@@ -55,7 +56,7 @@ function App() {
         }
       />
 
-      {/* Student Dashboard Routes */}
+      {/* Protected Student Layout & Dashboard */}
       <Route
         path="/student"
         element={
@@ -72,7 +73,7 @@ function App() {
         <Route path="certificates" element={<StudentCertificates />} />
       </Route>
 
-      {/* Instructor Dashboard & Analytics Routes */}
+      {/* Protected Instructor Layout & Studio */}
       <Route
         path="/instructor"
         element={
@@ -90,7 +91,7 @@ function App() {
         <Route path="analytics" element={<InstructorAnalytics />} />
       </Route>
 
-      {/* Admin Routes */}
+      {/* Protected Admin Layout & Command Center */}
       <Route
         path="/admin"
         element={
@@ -108,15 +109,15 @@ function App() {
         <Route path="users" element={<AdminDashboard />} />
       </Route>
 
-      {/* Fallback Unauthorized Route */}
+      {/* Fallback & Unauthorized Routes */}
       <Route
         path="/unauthorized"
         element={
           <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-4 text-center">
             <h1 className="text-3xl font-bold text-red-500 mb-2">403 - Access Denied</h1>
-            <p className="text-slate-400 mb-6">You do not have permission to view this resource.</p>
+            <p className="text-slate-400 mb-6">You do not have permission to access this page.</p>
             <a href="/" className="px-6 py-2.5 bg-indigo-600 rounded-xl text-sm font-semibold">
-              Back to Home
+              Return to Homepage
             </a>
           </div>
         }

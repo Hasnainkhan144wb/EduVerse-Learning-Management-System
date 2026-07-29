@@ -19,6 +19,15 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!token && !!user;
   const role = user?.role || null;
 
+  // Logout handler
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+    setLoading(false);
+  }, []);
+
   // Auto-login / verify token on mount
   const checkAuthStatus = useCallback(async () => {
     const storedToken = localStorage.getItem('token');
@@ -44,7 +53,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     checkAuthStatus();
@@ -57,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       window.removeEventListener('auth-error', handleAuthError);
     };
-  }, [checkAuthStatus]);
+  }, [checkAuthStatus, logout]);
 
   // Login handler
   const login = async (email, password) => {
@@ -66,10 +75,10 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', { email, password });
       if (response.data.success) {
         const { token: newToken, ...userData } = response.data.data;
-        
+
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(userData));
-        
+
         setToken(newToken);
         setUser(userData);
         setLoading(false);
@@ -77,7 +86,8 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       setLoading(false);
-      const message = error.response?.data?.message || 'Login failed. Please check credentials.';
+      const message =
+        error.response?.data?.message || 'Login failed. Please check credentials.';
       return { success: false, message };
     }
   };
@@ -100,18 +110,10 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       setLoading(false);
-      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      const message =
+        error.response?.data?.message || 'Registration failed. Please try again.';
       return { success: false, message };
     }
-  };
-
-  // Logout handler
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    setLoading(false);
   };
 
   // Profile update helper
