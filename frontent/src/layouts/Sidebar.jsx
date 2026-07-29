@@ -13,6 +13,7 @@ import {
   FiFolder,
   FiUserCheck,
   FiFileText,
+  FiMessageSquare,
 } from 'react-icons/fi';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -31,6 +32,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'Create Course', path: '/instructor/courses/create', icon: FiPlusCircle },
     { label: 'Enrolled Students', path: '/instructor/students', icon: FiUsers },
     { label: 'Assignments', path: '/instructor/assignments/manage', icon: FiFileText },
+    { label: 'Student Q&A', path: '/instructor/questions', icon: FiMessageSquare },
     { label: 'Analytics', path: '/instructor/analytics', icon: FiBarChart2 },
   ];
 

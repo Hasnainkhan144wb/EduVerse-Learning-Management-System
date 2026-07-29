@@ -17,6 +17,7 @@ const enrolmentRoutes = require('./routes/enrolmentRoutes');
 const quizRoutes = require('./routes/quizRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const discussionRoutes = require('./routes/discussionRoutes');
 
 const { protect, authorize } = require('./middleware/authMiddleware');
 const { getInstructorStudents } = require('./controllers/enrolmentController');
@@ -59,6 +60,7 @@ app.use('/api/enrolments', enrolmentRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/questions', discussionRoutes);
 
 // Direct Instructor Students Endpoint Alias
 app.get('/api/instructor/students', protect, authorize('Instructor', 'Admin'), getInstructorStudents);
