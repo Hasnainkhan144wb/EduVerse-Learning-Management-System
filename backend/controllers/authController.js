@@ -5,14 +5,14 @@ const generateToken = require('../utils/generateToken');
 // @desc    Register new user (Student / Instructor / Admin)
 // @route   POST /api/auth/register
 // @access  Public
-const registerUser = async (req, res, next) => {
+const registerUser = async (req, res) => {
   try {
     const { name, email, password, role, avatar } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide name, email, and password',
+        message: 'Please provide all required fields (name, email, and password)',
       });
     }
 
@@ -21,57 +21,55 @@ const registerUser = async (req, res, next) => {
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email',
+        message: 'User already exists with this email address',
       });
     }
 
-    // Assign role (default to Student if not provided or invalid)
+    // Validate role (default to Student)
     const validRoles = ['Student', 'Instructor', 'Admin'];
     const userRole = validRoles.includes(role) ? role : 'Student';
 
-    // Default instructor approval status
-    const isApproved = userRole === 'Instructor' ? true : true;
-
-    // Create user
+    // Create user (password hashing automatically handled in User pre-save hook)
     const user = await User.create({
       name,
       email,
       password,
       role: userRole,
       avatar: avatar || '',
-      isApproved,
+      isApproved: true,
     });
 
     const token = generateToken(user._id, user.role);
 
+    const userPayload = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      isApproved: user.isApproved,
+      token,
+    };
+
     return res.status(201).json({
       success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-        isApproved: user.isApproved,
-        token,
-      },
+      data: userPayload,
+      user: userPayload,
+      token,
     });
   } catch (error) {
-    if (typeof next === 'function') {
-      next(error);
-    } else {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Internal Server Error',
-      });
-    }
+    console.error('Register Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error occurred during registration',
+    });
   }
 };
 
 // @desc    Authenticate user & get token (Login)
 // @route   POST /api/auth/login
 // @access  Public
-const loginUser = async (req, res, next) => {
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -88,7 +86,7 @@ const loginUser = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid email or password credentials',
       });
     }
 
@@ -97,66 +95,72 @@ const loginUser = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid email or password credentials',
       });
     }
 
     const token = generateToken(user._id, user.role);
 
+    const userPayload = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      isApproved: user.isApproved,
+      token,
+    };
+
     return res.status(200).json({
       success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-        isApproved: user.isApproved,
-        token,
-      },
+      data: userPayload,
+      user: userPayload,
+      token,
     });
   } catch (error) {
-    if (typeof next === 'function') {
-      next(error);
-    } else {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Internal Server Error',
-      });
-    }
+    console.error('Login Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error occurred during login',
+    });
   }
 };
 
 // @desc    Get logged in user profile
 // @route   GET /api/auth/me
 // @access  Private
-const getMe = async (req, res, next) => {
+const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
       .populate('wishlist', 'title thumbnail price')
       .populate('enrolledCourses', 'title thumbnail progressPercentage')
       .populate('createdCourses', 'title thumbnail status price');
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found',
+      });
+    }
+
     return res.status(200).json({
       success: true,
       data: user,
+      user,
     });
   } catch (error) {
-    if (typeof next === 'function') {
-      next(error);
-    } else {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Internal Server Error',
-      });
-    }
+    console.error('Get Profile Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error occurred fetching profile',
+    });
   }
 };
 
 // @desc    Forgot Password - Request reset token
 // @route   POST /api/auth/forgot-password
 // @access  Public
-const forgotPassword = async (req, res, next) => {
+const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -185,21 +189,18 @@ const forgotPassword = async (req, res, next) => {
       resetToken,
     });
   } catch (error) {
-    if (typeof next === 'function') {
-      next(error);
-    } else {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Internal Server Error',
-      });
-    }
+    console.error('Forgot Password Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error processing password reset request',
+    });
   }
 };
 
 // @desc    Reset Password with Token
 // @route   PUT /api/auth/reset-password/:resetToken
 // @access  Public
-const resetPassword = async (req, res, next) => {
+const resetPassword = async (req, res) => {
   try {
     const { password } = req.body;
 
@@ -242,14 +243,11 @@ const resetPassword = async (req, res, next) => {
       token,
     });
   } catch (error) {
-    if (typeof next === 'function') {
-      next(error);
-    } else {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Internal Server Error',
-      });
-    }
+    console.error('Reset Password Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error resetting password',
+    });
   }
 };
 
