@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import {
-  FiBookOpen,
   FiPlus,
   FiEdit,
   FiTrash2,
@@ -12,10 +11,7 @@ import {
   FiVideo,
   FiFileText,
   FiHelpCircle,
-  FiCheckCircle,
   FiArrowLeft,
-  FiDownload,
-  FiCode,
   FiX,
   FiChevronDown,
   FiChevronUp,
@@ -242,7 +238,7 @@ const ManageLessons = () => {
             Curriculum Studio: {course?.title}
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Organize sections, upload video streams, attach PDF readings, and configure notes.
+            Organize sections, upload video streams, attach PDF readings, and configure quiz assessments.
           </p>
         </div>
 
@@ -361,6 +357,14 @@ const ManageLessons = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          {lesson.type === 'quiz' && (
+                            <Link
+                              to={`/instructor/quizzes/create/${lesson._id}`}
+                              className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition"
+                            >
+                              <FiHelpCircle /> Configure Quiz
+                            </Link>
+                          )}
                           <button
                             onClick={() => handleOpenEditLesson(lesson)}
                             className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition"

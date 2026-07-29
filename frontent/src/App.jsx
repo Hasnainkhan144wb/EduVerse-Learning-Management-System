@@ -22,6 +22,7 @@ import InstructorDashboard from './instructor/InstructorDashboard';
 import CourseBuilder from './instructor/CourseBuilder';
 import CreateCourse from './instructor/CreateCourse';
 import ManageLessons from './instructor/ManageLessons';
+import CreateQuiz from './instructor/CreateQuiz';
 import InstructorAnalytics from './instructor/InstructorAnalytics';
 
 import AdminDashboard from './admin/AdminDashboard';
@@ -90,6 +91,8 @@ function App() {
         <Route path="courses" element={<InstructorDashboard />} />
         <Route path="courses/create" element={<CreateCourse />} />
         <Route path="courses/:courseId/lessons" element={<ManageLessons />} />
+        <Route path="quizzes/create" element={<CreateQuiz />} />
+        <Route path="quizzes/create/:lessonId" element={<CreateQuiz />} />
         <Route path="courses/builder" element={<CourseBuilder />} />
         <Route path="courses/edit/:courseId" element={<CourseBuilder />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
