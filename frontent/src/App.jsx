@@ -18,6 +18,7 @@ import AdminLayout from './layouts/AdminLayout';
 import StudentDashboard from './student/StudentDashboard';
 import MyCourses from './student/MyCourses';
 import CoursePlayer from './student/CoursePlayer';
+import TakeQuiz from './student/TakeQuiz';
 import Checkout from './student/Checkout';
 import StudentCertificates from './student/StudentCertificates';
 
@@ -56,7 +57,7 @@ function App() {
       <Route path="/courses" element={<BrowseCourses />} />
       <Route path="/courses/:id" element={<CourseDetails />} />
 
-      {/* Standalone Protected Checkout & Course Player */}
+      {/* Standalone Protected Checkout & Course Player & Take Quiz */}
       <Route
         path="/checkout/:courseId"
         element={
@@ -71,6 +72,15 @@ function App() {
         element={
           <ProtectedRoute>
             <CoursePlayer />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student/quiz/:quizId"
+        element={
+          <ProtectedRoute>
+            <TakeQuiz />
           </ProtectedRoute>
         }
       />
