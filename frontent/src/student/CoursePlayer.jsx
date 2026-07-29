@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -19,10 +19,12 @@ import {
   FiCode,
   FiSend,
   FiCheck,
+  FiSliders,
 } from 'react-icons/fi';
 
 const CoursePlayer = () => {
   const { courseId } = useParams();
+  const videoRef = useRef(null);
 
   const [course, setCourse] = useState(null);
   const [sections, setSections] = useState([]);
@@ -30,6 +32,9 @@ const CoursePlayer = () => {
   const [completedLessons, setCompletedLessons] = useState([]);
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Playback Speed State
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   // Tab & Accordion state
   const [activeTab, setActiveTab] = useState('overview'); // overview, pdf, notes, source
@@ -94,6 +99,14 @@ const CoursePlayer = () => {
     fetchCourseDetails();
   }, [fetchCourseDetails]);
 
+  // Handle Playback speed changes
+  const handleSpeedChange = (speed) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  };
+
   // Toggle section accordion
   const toggleSection = (sectionId) => {
     setExpandedSections((prev) => ({
@@ -102,23 +115,33 @@ const CoursePlayer = () => {
     }));
   };
 
-  // Mark current lesson completed
-  const handleMarkComplete = async () => {
-    if (!activeLesson) return;
+  // Mark lesson as complete (or toggle)
+  const handleMarkLessonComplete = async (targetLessonId) => {
+    const targetId = targetLessonId || (activeLesson ? activeLesson._id : null);
+    if (!targetId) return;
+
     try {
       const response = await api.post('/enrolments/progress', {
         courseId,
-        lessonId: activeLesson._id,
+        lessonId: targetId,
       });
 
       if (response.data.success) {
         const enrolment = response.data.data;
         setCompletedLessons(enrolment.completedLessons || []);
         setProgressPercentage(enrolment.progressPercentage || 0);
-        toast.success('Lesson marked as completed! 🎉');
+        toast.success('Progress updated successfully! 🎉');
       }
     } catch (err) {
       toast.error('Failed to update lesson progress');
+    }
+  };
+
+  // Auto completion on video finish
+  const handleVideoEnded = () => {
+    if (activeLesson) {
+      toast.success('Video finished! Progress saved.');
+      handleMarkLessonComplete(activeLesson._id);
     }
   };
 
@@ -156,7 +179,7 @@ const CoursePlayer = () => {
         setQuizResult(response.data.data);
         if (response.data.data.passed) {
           toast.success('Congratulations! You passed the quiz! 🏆');
-          handleMarkComplete();
+          handleMarkLessonComplete(activeLesson?._id);
         } else {
           toast.error('Quiz score below passing threshold. Try again!');
         }
@@ -205,7 +228,7 @@ const CoursePlayer = () => {
         toast.success('Assignment submitted successfully! 🚀');
         setAssignmentModalOpen(false);
         reset();
-        handleMarkComplete();
+        handleMarkLessonComplete(activeLesson?._id);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit assignment');
@@ -236,7 +259,9 @@ const CoursePlayer = () => {
     );
   }
 
-  const isCompleted = activeLesson && completedLessons.some(id => String(id) === String(activeLesson._id));
+  const isActiveCompleted =
+    activeLesson &&
+    completedLessons.some((id) => String(id) === String(activeLesson._id));
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -301,8 +326,10 @@ const CoursePlayer = () => {
                   />
                 ) : (
                   <video
+                    ref={videoRef}
                     src={activeLesson.videoUrl}
                     controls
+                    onEnded={handleVideoEnded}
                     className="w-full h-full object-contain"
                   />
                 )
@@ -344,7 +371,7 @@ const CoursePlayer = () => {
             </div>
 
             {/* Action Bar Under Player */}
-            <div className="p-4 bg-slate-900 border-t border-slate-800/80 flex items-center justify-between">
+            <div className="p-4 bg-slate-900 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <span className="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">
                   {activeLesson?.type || 'Lesson'}
@@ -354,21 +381,44 @@ const CoursePlayer = () => {
                 </h2>
               </div>
 
-              <button
-                onClick={handleMarkComplete}
-                className={`px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition ${
-                  isCompleted
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                }`}
-              >
-                <FiCheckCircle className="w-4 h-4" />
-                {isCompleted ? 'Completed ✓' : 'Mark Complete'}
-              </button>
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                {/* Playback Speed Controls */}
+                {activeLesson?.type === 'video' && (
+                  <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
+                    <FiSliders className="text-indigo-400" />
+                    <span className="text-slate-400 text-[11px] font-semibold">Speed:</span>
+                    {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                      <button
+                        key={spd}
+                        onClick={() => handleSpeedChange(spd)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition ${
+                          playbackSpeed === spd
+                            ? 'bg-indigo-600 text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {spd}x
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => handleMarkLessonComplete(activeLesson?._id)}
+                  className={`px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition ${
+                    isActiveCompleted
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                  }`}
+                >
+                  <FiCheckCircle className="w-4 h-4" />
+                  {isActiveCompleted ? 'Completed ✓' : 'Mark Complete'}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Content Tabs */}
+          {/* Resource Tabs */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex border-b border-slate-800 gap-6">
               <button
@@ -390,7 +440,7 @@ const CoursePlayer = () => {
                       : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  PDF Materials
+                  PDF Study Guide
                 </button>
               )}
               {activeLesson?.sourceCode && (
@@ -402,7 +452,7 @@ const CoursePlayer = () => {
                       : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Source Code
+                  Source Code & Attachments
                 </button>
               )}
             </div>
@@ -411,28 +461,31 @@ const CoursePlayer = () => {
             {activeTab === 'overview' && (
               <div className="space-y-3 text-slate-300 text-sm leading-relaxed">
                 <h3 className="text-base font-bold text-white">Lesson Notes & Summary</h3>
-                <p>{activeLesson?.notes || 'No notes provided for this lesson.'}</p>
+                <p>{activeLesson?.notes || 'No detailed notes provided for this lesson.'}</p>
               </div>
             )}
 
             {activeTab === 'pdf' && (
               <div className="space-y-4">
-                <h3 className="text-base font-bold text-white">PDF Reading Attachment</h3>
-                <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FiFileText className="w-6 h-6 text-emerald-400" />
-                    <span className="text-sm font-medium text-slate-200">
-                      {activeLesson?.title || 'Document'}.pdf
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <FiFileText className="text-emerald-400" /> Embedded PDF Reader
+                  </h3>
                   <a
                     href={activeLesson?.pdfUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl flex items-center gap-2 transition"
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition"
                   >
-                    <FiDownload /> View / Download
+                    <FiDownload /> Download PDF
                   </a>
+                </div>
+                <div className="w-full h-96 bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden">
+                  <iframe
+                    src={activeLesson?.pdfUrl}
+                    title="PDF Viewer"
+                    className="w-full h-full border-0"
+                  />
                 </div>
               </div>
             )}
@@ -441,27 +494,27 @@ const CoursePlayer = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <FiCode className="text-indigo-400" /> Source Code Snippet
+                    <FiCode className="text-indigo-400" /> Lesson Attachments & Source Code
                   </h3>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(activeLesson?.sourceCode || '');
-                      toast.success('Code copied to clipboard!');
+                      toast.success('Code snippet copied!');
                     }}
                     className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg transition"
                   >
-                    Copy Code
+                    Copy Snippet
                   </button>
                 </div>
                 <pre className="p-4 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-mono text-emerald-400 overflow-x-auto">
-                  {activeLesson?.sourceCode || '// No source code snippet provided.'}
+                  {activeLesson?.sourceCode || '// No source code attachments provided for this lesson.'}
                 </pre>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Curriculum Accordion */}
+        {/* Right Column: Curriculum Accordion with Interactive Checkboxes */}
         <div className="bg-slate-900/90 border-l border-slate-800/80 p-4 lg:p-6 overflow-y-auto space-y-4">
           <h2 className="text-base font-bold text-white mb-2">Course Curriculum</h2>
 
@@ -502,14 +555,16 @@ const CoursePlayer = () => {
                         return (
                           <div
                             key={lesson._id}
-                            onClick={() => setActiveLesson(lesson)}
-                            className={`p-3.5 flex items-center justify-between cursor-pointer transition ${
+                            className={`p-3.5 flex items-center justify-between transition ${
                               isSelected
                                 ? 'bg-indigo-600/15 border-l-4 border-indigo-500 text-white'
                                 : 'hover:bg-slate-800/40 text-slate-300'
                             }`}
                           >
-                            <div className="flex items-center gap-3">
+                            <div
+                              onClick={() => setActiveLesson(lesson)}
+                              className="flex items-center gap-3 cursor-pointer flex-1"
+                            >
                               <span className="text-lg">{getLessonIcon(lesson.type)}</span>
                               <div>
                                 <h4 className="text-xs font-semibold line-clamp-1">
@@ -521,9 +576,21 @@ const CoursePlayer = () => {
                               </div>
                             </div>
 
-                            {isLessonCompleted && (
-                              <FiCheck className="w-4 h-4 text-emerald-400" />
-                            )}
+                            {/* Interactive Completion Checkbox */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkLessonComplete(lesson._id);
+                              }}
+                              className={`p-1.5 rounded-lg border transition ${
+                                isLessonCompleted
+                                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                                  : 'border-slate-700 hover:border-slate-500 text-slate-500'
+                              }`}
+                              title={isLessonCompleted ? 'Marked Completed' : 'Mark Complete'}
+                            >
+                              <FiCheck className="w-4 h-4" />
+                            </button>
                           </div>
                         );
                       })
