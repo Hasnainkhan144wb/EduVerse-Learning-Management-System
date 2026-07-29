@@ -139,7 +139,7 @@ const loginUser = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .populate('wishlist', 'title thumbnail price')
+      .populate('wishlist', 'title thumbnail price description level')
       .populate('enrolledCourses', 'title thumbnail progressPercentage')
       .populate('createdCourses', 'title thumbnail status price');
 
@@ -161,6 +161,45 @@ const getMe = async (req, res) => {
       success: false,
       message: error.message || 'Server error fetching profile',
     });
+  }
+};
+
+// @desc    Toggle course in user's wishlist
+// @route   POST /api/auth/wishlist OR POST /api/users/wishlist
+// @access  Private
+const toggleWishlist = async (req, res) => {
+  try {
+    const { courseId } = req.body;
+    const userId = req.user._id;
+
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'Please provide courseId' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const index = user.wishlist.indexOf(courseId);
+    let message = '';
+    if (index > -1) {
+      user.wishlist.splice(index, 1);
+      message = 'Course removed from wishlist';
+    } else {
+      user.wishlist.push(courseId);
+      message = 'Course added to wishlist';
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message,
+      data: user.wishlist,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -262,6 +301,7 @@ module.exports = {
   registerUser,
   loginUser,
   getMe,
+  toggleWishlist,
   forgotPassword,
   resetPassword,
 };

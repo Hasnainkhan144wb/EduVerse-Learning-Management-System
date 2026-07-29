@@ -21,6 +21,7 @@ const discussionRoutes = require('./routes/discussionRoutes');
 
 const { protect, authorize } = require('./middleware/authMiddleware');
 const { getInstructorStudents } = require('./controllers/enrolmentController');
+const { toggleWishlist } = require('./controllers/authController');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 // Connect to MongoDB
@@ -62,8 +63,9 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/questions', discussionRoutes);
 
-// Direct Instructor Students Endpoint Alias
+// Direct Aliases
 app.get('/api/instructor/students', protect, authorize('Instructor', 'Admin'), getInstructorStudents);
+app.post('/api/users/wishlist', protect, toggleWishlist);
 
 // Health check endpoint
 app.use('/api/health', (req, res) => {
