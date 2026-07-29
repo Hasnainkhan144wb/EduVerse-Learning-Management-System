@@ -22,6 +22,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const studentLinks = [
     { label: 'Overview', path: '/student', icon: FiGrid },
     { label: 'Enrolled Courses', path: '/student/courses', icon: FiBookOpen },
+    { label: 'My Assignments', path: '/student/assignments', icon: FiFileText },
     { label: 'Wishlist', path: '/student/wishlist', icon: FiHeart },
     { label: 'Certificates', path: '/student/certificates', icon: FiAward },
   ];

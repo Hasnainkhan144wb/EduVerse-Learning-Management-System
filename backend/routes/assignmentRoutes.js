@@ -5,12 +5,14 @@ const {
   getAssignmentByLesson,
   submitAssignment,
   getAssignmentSubmissions,
+  getMySubmissions,
   gradeSubmission,
 } = require('../controllers/assignmentController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { uploadSingle } = require('../middleware/uploadMiddleware');
 
 router.post('/', protect, authorize('Instructor', 'Admin'), createAssignment);
+router.get('/my-submissions', protect, getMySubmissions);
 router.get('/lesson/:lessonId', protect, getAssignmentByLesson);
 router.post(
   '/:assignmentId/submit',

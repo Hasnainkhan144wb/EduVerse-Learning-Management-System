@@ -37,7 +37,8 @@ const createAssignment = async (req, res, next) => {
       data: assignment,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -73,7 +74,8 @@ const getAssignmentByLesson = async (req, res, next) => {
       },
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -128,11 +130,12 @@ const submitAssignment = async (req, res, next) => {
       data: submission,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Get submissions for an assignment
+// @desc    Get submissions for an assignment (Instructor)
 // @route   GET /api/assignments/:assignmentId/submissions
 // @access  Private (Instructor/Admin)
 const getAssignmentSubmissions = async (req, res, next) => {
@@ -149,7 +152,38 @@ const getAssignmentSubmissions = async (req, res, next) => {
       data: submissions,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get current student's assignment submissions
+// @route   GET /api/assignments/my-submissions
+// @access  Private (Student)
+const getMySubmissions = async (req, res, next) => {
+  try {
+    const studentId = req.user._id;
+
+    const submissions = await Submission.find({ studentId })
+      .populate({
+        path: 'assignmentId',
+        select: 'title instructions totalMarks dueDate lessonId',
+        populate: {
+          path: 'lessonId',
+          select: 'title courseId',
+          populate: { path: 'courseId', select: 'title' },
+        },
+      })
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: submissions.length,
+      data: submissions,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -192,7 +226,8 @@ const gradeSubmission = async (req, res, next) => {
       data: submission,
     });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -201,5 +236,6 @@ module.exports = {
   getAssignmentByLesson,
   submitAssignment,
   getAssignmentSubmissions,
+  getMySubmissions,
   gradeSubmission,
 };

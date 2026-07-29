@@ -19,6 +19,7 @@ import StudentDashboard from './student/StudentDashboard';
 import MyCourses from './student/MyCourses';
 import CoursePlayer from './student/CoursePlayer';
 import TakeQuiz from './student/TakeQuiz';
+import StudentAssignments from './student/StudentAssignments';
 import Checkout from './student/Checkout';
 import StudentCertificates from './student/StudentCertificates';
 
@@ -99,6 +100,7 @@ function App() {
         <Route index element={<StudentDashboard />} />
         <Route path="courses" element={<MyCourses />} />
         <Route path="my-courses" element={<MyCourses />} />
+        <Route path="assignments" element={<StudentAssignments />} />
         <Route path="wishlist" element={<StudentDashboard />} />
         <Route path="certificates" element={<StudentCertificates />} />
       </Route>
