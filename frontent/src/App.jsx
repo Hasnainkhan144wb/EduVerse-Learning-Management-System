@@ -10,7 +10,11 @@ import InstructorLayout from './layouts/InstructorLayout';
 import AdminLayout from './layouts/AdminLayout';
 
 import StudentDashboard from './student/StudentDashboard';
+import CoursePlayer from './student/CoursePlayer';
+
 import InstructorDashboard from './instructor/InstructorDashboard';
+import CourseBuilder from './instructor/CourseBuilder';
+
 import AdminDashboard from './admin/AdminDashboard';
 
 function App() {
@@ -39,7 +43,17 @@ function App() {
       {/* Root redirect based on role */}
       <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
 
-      {/* Student Routes */}
+      {/* Student Course Player (Standalone View) */}
+      <Route
+        path="/course-player/:courseId"
+        element={
+          <ProtectedRoute>
+            <CoursePlayer />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Student Dashboard Routes */}
       <Route
         path="/student"
         element={
@@ -56,7 +70,7 @@ function App() {
         <Route path="certificates" element={<StudentDashboard />} />
       </Route>
 
-      {/* Instructor Routes */}
+      {/* Instructor Dashboard & Course Builder Routes */}
       <Route
         path="/instructor"
         element={
@@ -69,7 +83,8 @@ function App() {
       >
         <Route index element={<InstructorDashboard />} />
         <Route path="courses" element={<InstructorDashboard />} />
-        <Route path="courses/create" element={<InstructorDashboard />} />
+        <Route path="courses/create" element={<CourseBuilder />} />
+        <Route path="courses/edit/:courseId" element={<CourseBuilder />} />
         <Route path="analytics" element={<InstructorDashboard />} />
       </Route>
 
@@ -91,7 +106,7 @@ function App() {
         <Route path="users" element={<AdminDashboard />} />
       </Route>
 
-      {/* Fallback Unauthorized & 404 Routes */}
+      {/* Fallback Unauthorized Route */}
       <Route
         path="/unauthorized"
         element={
