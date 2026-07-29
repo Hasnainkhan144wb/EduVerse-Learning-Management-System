@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 
@@ -9,27 +11,28 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password, role, avatar } = req.body;
 
+    // 1. Basic validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields (name, email, and password)',
+        message: 'All fields (name, email, password) are required.',
       });
     }
 
-    // Check if user already exists
+    // 2. Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email address',
+        message: 'User already exists with this email address.',
       });
     }
 
-    // Validate role (default to Student)
+    // 3. Role assignment
     const validRoles = ['Student', 'Instructor', 'Admin'];
     const userRole = validRoles.includes(role) ? role : 'Student';
 
-    // Create user (password hashing automatically handled in User pre-save hook)
+    // 4. Create User (password hashing automatically handled by User pre-save hook)
     const user = await User.create({
       name,
       email,
@@ -39,7 +42,13 @@ const registerUser = async (req, res) => {
       isApproved: true,
     });
 
-    const token = generateToken(user._id, user.role);
+    // 5. Generate Token
+    const jwtSecret = process.env.JWT_SECRET || 'eduverse_super_secret_jwt_key_2026';
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      jwtSecret,
+      { expiresIn: '30d' }
+    );
 
     const userPayload = {
       _id: user._id,
@@ -48,20 +57,19 @@ const registerUser = async (req, res) => {
       role: user.role,
       avatar: user.avatar,
       isApproved: user.isApproved,
-      token,
     };
 
     return res.status(201).json({
       success: true,
-      data: userPayload,
-      user: userPayload,
       token,
+      data: { ...userPayload, token },
+      user: userPayload,
     });
   } catch (error) {
-    console.error('Register Error:', error.message);
+    console.error('🔥 BACKEND REGISTRATION ERROR:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server error occurred during registration',
+      message: error.message || 'Server error during registration',
     });
   }
 };
@@ -108,20 +116,19 @@ const loginUser = async (req, res) => {
       role: user.role,
       avatar: user.avatar,
       isApproved: user.isApproved,
-      token,
     };
 
     return res.status(200).json({
       success: true,
-      data: userPayload,
-      user: userPayload,
       token,
+      data: { ...userPayload, token },
+      user: userPayload,
     });
   } catch (error) {
-    console.error('Login Error:', error.message);
+    console.error('🔥 BACKEND LOGIN ERROR:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server error occurred during login',
+      message: error.message || 'Server error during login',
     });
   }
 };
@@ -149,10 +156,10 @@ const getMe = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error('Get Profile Error:', error.message);
+    console.error('🔥 BACKEND GET PROFILE ERROR:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server error occurred fetching profile',
+      message: error.message || 'Server error fetching profile',
     });
   }
 };
@@ -189,7 +196,7 @@ const forgotPassword = async (req, res) => {
       resetToken,
     });
   } catch (error) {
-    console.error('Forgot Password Error:', error.message);
+    console.error('🔥 BACKEND FORGOT PASSWORD ERROR:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Server error processing password reset request',
@@ -243,7 +250,7 @@ const resetPassword = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error('Reset Password Error:', error.message);
+    console.error('🔥 BACKEND RESET PASSWORD ERROR:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Server error resetting password',
