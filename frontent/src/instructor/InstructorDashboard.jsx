@@ -11,6 +11,7 @@ import {
   FiPlusCircle,
   FiEdit,
   FiEye,
+  FiList,
   FiArrowRight,
 } from 'react-icons/fi';
 
@@ -23,7 +24,6 @@ const InstructorDashboard = () => {
     const fetchInstructorCourses = async () => {
       try {
         const response = await api.get(`/courses?status=Published`).catch(() => ({ data: { data: [] } }));
-        // Filter courses created by this instructor if needed
         const myCourses = (response.data.data || []).filter(
           (c) => c.instructorRef?._id === user?._id || c.instructorRef === user?._id
         );
@@ -38,7 +38,6 @@ const InstructorDashboard = () => {
     fetchInstructorCourses();
   }, [user]);
 
-  // Mocked analytics derived from instructor courses
   const totalStudents = courses.length * 14;
   const totalRevenue = courses.reduce((acc, c) => acc + (c.price || 0) * 12, 0);
   const avgRating = 4.8;
@@ -53,21 +52,21 @@ const InstructorDashboard = () => {
       {/* Top Welcome & Actions Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
         <div>
-          <span className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
+          <span className="inline-block px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
             Instructor Portal
           </span>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white">
             Instructor Studio: {user?.name || 'Instructor'} 🎓
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Manage your curriculum, track student engagements, and publish high quality learning content.
+            Manage curriculum, upload video lessons, attach PDF readings, and publish courses.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Link
             to="/instructor/courses/create"
-            className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-emerald-600/25 flex items-center gap-2"
+            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center gap-2"
           >
             <FiPlusCircle className="w-5 h-5" />
             Create New Course
@@ -123,19 +122,19 @@ const InstructorDashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-white">Your Courses</h2>
-            <p className="text-xs text-slate-400">Manage, edit, and publish your course materials</p>
+            <p className="text-xs text-slate-400">Manage sections, upload lessons, and edit course details</p>
           </div>
           <Link
-            to="/instructor/courses"
-            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
+            to="/instructor/courses/create"
+            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition"
           >
-            Manage All <FiArrowRight />
+            + Create Course <FiArrowRight />
           </Link>
         </div>
 
         {loading ? (
           <div className="p-8 text-center">
-            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
             <p className="text-slate-400 text-sm">Loading instructor courses...</p>
           </div>
         ) : courses.length === 0 ? (
@@ -149,7 +148,7 @@ const InstructorDashboard = () => {
             </div>
             <Link
               to="/instructor/courses/create"
-              className="inline-block px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition shadow-lg shadow-emerald-600/30"
+              className="inline-block px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition shadow-lg shadow-indigo-600/30"
             >
               Create Course
             </Link>
@@ -183,14 +182,14 @@ const InstructorDashboard = () => {
                     <td className="py-4 px-4 text-slate-400">
                       {course.categoryRef?.name || 'General'}
                     </td>
-                    <td className="py-4 px-4 font-semibold text-emerald-400">
+                    <td className="py-4 px-4 font-semibold text-indigo-400">
                       ${course.price || 0}
                     </td>
                     <td className="py-4 px-4">
                       <span
                         className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full border ${
                           course.status === 'Published'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
                             : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                         }`}
                       >
@@ -200,18 +199,18 @@ const InstructorDashboard = () => {
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link
-                          to={`/courses/${course._id}`}
-                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
-                          title="View Course"
+                          to={`/instructor/courses/${course._id}/lessons`}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition"
+                          title="Manage Lessons"
                         >
-                          <FiEye className="w-4 h-4" />
+                          <FiList /> Manage Lessons
                         </Link>
                         <Link
-                          to={`/instructor/courses/edit/${course._id}`}
-                          className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition"
-                          title="Edit Course"
+                          to={`/course-player/${course._id}`}
+                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                          title="Preview Player"
                         >
-                          <FiEdit className="w-4 h-4" />
+                          <FiEye className="w-4 h-4" />
                         </Link>
                       </div>
                     </td>
