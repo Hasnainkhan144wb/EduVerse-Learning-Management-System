@@ -238,7 +238,7 @@ const ManageLessons = () => {
             Curriculum Studio: {course?.title}
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Organize sections, upload video streams, attach PDF readings, and configure quiz assessments.
+            Organize sections, upload video streams, attach PDF readings, and configure quiz & assignment tasks.
           </p>
         </div>
 
@@ -360,9 +360,17 @@ const ManageLessons = () => {
                           {lesson.type === 'quiz' && (
                             <Link
                               to={`/instructor/quizzes/create/${lesson._id}`}
-                              className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition"
+                              className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition"
                             >
                               <FiHelpCircle /> Configure Quiz
+                            </Link>
+                          )}
+                          {lesson.type === 'assignment' && (
+                            <Link
+                              to={`/instructor/assignments/manage/${lesson._id}`}
+                              className="px-3 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition"
+                            >
+                              <FiFileText /> Configure Assignment
                             </Link>
                           )}
                           <button
