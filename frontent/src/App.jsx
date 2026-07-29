@@ -11,9 +11,11 @@ import AdminLayout from './layouts/AdminLayout';
 
 import StudentDashboard from './student/StudentDashboard';
 import CoursePlayer from './student/CoursePlayer';
+import StudentCertificates from './student/StudentCertificates';
 
 import InstructorDashboard from './instructor/InstructorDashboard';
 import CourseBuilder from './instructor/CourseBuilder';
+import InstructorAnalytics from './instructor/InstructorAnalytics';
 
 import AdminDashboard from './admin/AdminDashboard';
 
@@ -67,10 +69,10 @@ function App() {
         <Route index element={<StudentDashboard />} />
         <Route path="courses" element={<StudentDashboard />} />
         <Route path="wishlist" element={<StudentDashboard />} />
-        <Route path="certificates" element={<StudentDashboard />} />
+        <Route path="certificates" element={<StudentCertificates />} />
       </Route>
 
-      {/* Instructor Dashboard & Course Builder Routes */}
+      {/* Instructor Dashboard & Analytics Routes */}
       <Route
         path="/instructor"
         element={
@@ -85,7 +87,7 @@ function App() {
         <Route path="courses" element={<InstructorDashboard />} />
         <Route path="courses/create" element={<CourseBuilder />} />
         <Route path="courses/edit/:courseId" element={<CourseBuilder />} />
-        <Route path="analytics" element={<InstructorDashboard />} />
+        <Route path="analytics" element={<InstructorAnalytics />} />
       </Route>
 
       {/* Admin Routes */}
