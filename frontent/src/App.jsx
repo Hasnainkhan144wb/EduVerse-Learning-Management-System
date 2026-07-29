@@ -1,122 +1,113 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+
+import ProtectedRoute from './routes/ProtectedRoute';
+import RoleBaseRoute from './routes/RoleBaseRoute';
+
+import StudentLayout from './layouts/StudentLayout';
+import InstructorLayout from './layouts/InstructorLayout';
+import AdminLayout from './layouts/AdminLayout';
+
+import StudentDashboard from './student/StudentDashboard';
+import InstructorDashboard from './instructor/InstructorDashboard';
+import AdminDashboard from './admin/AdminDashboard';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { isAuthenticated, role, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-400 text-sm font-medium">Initializing EduVerse LMS...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const getDefaultRedirect = () => {
+    if (!isAuthenticated) return '/login';
+    if (role === 'Instructor') return '/instructor';
+    if (role === 'Admin') return '/admin';
+    return '/student';
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <Routes>
+      {/* Root redirect based on role */}
+      <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
 
-      <div className="ticks"></div>
+      {/* Student Routes */}
+      <Route
+        path="/student"
+        element={
+          <ProtectedRoute>
+            <RoleBaseRoute allowedRoles={['Student', 'Instructor', 'Admin']}>
+              <StudentLayout />
+            </RoleBaseRoute>
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<StudentDashboard />} />
+        <Route path="courses" element={<StudentDashboard />} />
+        <Route path="wishlist" element={<StudentDashboard />} />
+        <Route path="certificates" element={<StudentDashboard />} />
+      </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* Instructor Routes */}
+      <Route
+        path="/instructor"
+        element={
+          <ProtectedRoute>
+            <RoleBaseRoute allowedRoles={['Instructor', 'Admin']}>
+              <InstructorLayout />
+            </RoleBaseRoute>
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<InstructorDashboard />} />
+        <Route path="courses" element={<InstructorDashboard />} />
+        <Route path="courses/create" element={<InstructorDashboard />} />
+        <Route path="analytics" element={<InstructorDashboard />} />
+      </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <RoleBaseRoute allowedRoles={['Admin']}>
+              <AdminLayout />
+            </RoleBaseRoute>
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="approvals" element={<AdminDashboard />} />
+        <Route path="courses" element={<AdminDashboard />} />
+        <Route path="categories" element={<AdminDashboard />} />
+        <Route path="users" element={<AdminDashboard />} />
+      </Route>
+
+      {/* Fallback Unauthorized & 404 Routes */}
+      <Route
+        path="/unauthorized"
+        element={
+          <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-4 text-center">
+            <h1 className="text-3xl font-bold text-red-500 mb-2">403 - Access Denied</h1>
+            <p className="text-slate-400 mb-6">You do not have permission to view this resource.</p>
+            <a href="/" className="px-6 py-2.5 bg-indigo-600 rounded-xl text-sm font-semibold">
+              Back to Home
+            </a>
+          </div>
+        }
+      />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;
