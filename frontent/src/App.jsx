@@ -38,6 +38,8 @@ import InstructorAnalytics from './instructor/InstructorAnalytics';
 
 import AdminDashboard from './admin/AdminDashboard';
 import ManageUsers from './pages/admin/ManageUsers';
+import ManageCourses from './pages/admin/ManageCourses';
+import ManageCategories from './pages/admin/ManageCategories';
 
 function App() {
   const { loading } = useAuth();
@@ -149,8 +151,8 @@ function App() {
       >
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="approvals" element={<ManageUsers />} />
-        <Route path="courses" element={<AdminDashboard />} />
-        <Route path="categories" element={<AdminDashboard />} />
+        <Route path="courses" element={<ManageCourses />} />
+        <Route path="categories" element={<ManageCategories />} />
         <Route path="users" element={<ManageUsers />} />
         <Route path="reports" element={<AdminDashboard />} />
       </Route>
