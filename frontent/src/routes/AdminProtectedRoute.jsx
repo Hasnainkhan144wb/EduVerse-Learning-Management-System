@@ -6,7 +6,28 @@ const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, role, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  // Check localStorage for persisted Admin session to prevent false bounce during state re-renders
+  const adminToken =
+    localStorage.getItem('adminToken') || localStorage.getItem('token');
+  const savedUser =
+    localStorage.getItem('adminUser') || localStorage.getItem('user');
+
+  let isLocalStorageAdmin = false;
+  if (adminToken && savedUser) {
+    try {
+      const parsedUser = JSON.parse(savedUser);
+      if (parsedUser && parsedUser.role === 'Admin') {
+        isLocalStorageAdmin = true;
+      }
+    } catch (e) {
+      isLocalStorageAdmin = false;
+    }
+  }
+
+  const hasAdminAccess =
+    isLocalStorageAdmin || (isAuthenticated && role === 'Admin');
+
+  if (loading && !isLocalStorageAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white">
         <div className="flex flex-col items-center gap-4">
@@ -17,7 +38,7 @@ const AdminProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated || role !== 'Admin') {
+  if (!hasAdminAccess) {
     return <Navigate to="/admin" state={{ from: location }} replace />;
   }
 

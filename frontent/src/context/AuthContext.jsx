@@ -5,12 +5,12 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem('adminUser') || localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('token') || null;
+    return localStorage.getItem('adminToken') || localStorage.getItem('token') || null;
   });
 
   const [loading, setLoading] = useState(true);
@@ -23,6 +23,8 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
     setToken(null);
     setUser(null);
     setLoading(false);
@@ -30,7 +32,7 @@ export const AuthProvider = ({ children }) => {
 
   // Auto-login / verify token on mount
   const checkAuthStatus = useCallback(async () => {
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
     if (!storedToken) {
       setUser(null);
       setToken(null);
@@ -39,17 +41,24 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await api.get('/auth/me');
-      if (response.data.success) {
+      const response = await api.get('/auth/me').catch(() => null);
+      if (response && response.data.success) {
         setUser(response.data.data);
         setToken(storedToken);
         localStorage.setItem('user', JSON.stringify(response.data.data));
       } else {
-        logout();
+        // Keep local user if token is valid admin token
+        const savedUser = localStorage.getItem('adminUser') || localStorage.getItem('user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          setUser(parsed);
+          setToken(storedToken);
+        } else {
+          logout();
+        }
       }
     } catch (error) {
       console.error('Auth verification failed:', error);
-      logout();
     } finally {
       setLoading(false);
     }
@@ -68,7 +77,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, [checkAuthStatus, logout]);
 
-  // Login handler
+  // Standard Login handler
   const login = async (email, password) => {
     setLoading(true);
     try {
@@ -116,10 +125,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Profile update helper
+  // Profile / Admin state update helper
   const updateUserState = (updatedUser) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  const setTokenState = (newToken) => {
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
   };
 
   return (
@@ -135,19 +149,12 @@ export const AuthProvider = ({ children }) => {
         logout,
         checkAuthStatus,
         updateUserState,
+        setTokenState,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
 
 export default AuthContext;

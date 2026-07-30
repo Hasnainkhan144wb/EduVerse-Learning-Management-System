@@ -10,13 +10,12 @@ import {
   FiLock,
   FiMail,
   FiArrowRight,
-  FiCheckCircle,
   FiKey,
 } from 'react-icons/fi';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { updateUserState, setTokenState } = useAuth();
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -38,11 +37,30 @@ const AdminLogin = () => {
         password: data.password,
       });
 
-      if (response.data.success) {
-        const { token, user } = response.data;
-        login(user, token);
+      if (response.data.success || response.data.token) {
+        const token = response.data.token;
+        const user = response.data.user || response.data.data;
+
+        // Save Admin credentials directly to localStorage
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminUser', JSON.stringify(user));
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        // Update global Auth Context state
+        if (updateUserState) {
+          updateUserState(user);
+        }
+        if (setTokenState) {
+          setTokenState(token);
+        }
+
         toast.success('Admin Security Authentication Successful! 🛡️');
-        navigate('/admin/dashboard', { replace: true });
+
+        // Immediate Smooth Redirect to Admin Dashboard
+        setTimeout(() => {
+          navigate('/admin/dashboard', { replace: true });
+        }, 300);
       }
     } catch (err) {
       console.error('Admin Login Failure:', err);
