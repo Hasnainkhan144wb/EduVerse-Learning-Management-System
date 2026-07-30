@@ -3,6 +3,17 @@ const Course = require('../models/Course');
 const Category = require('../models/Category');
 const Enrolment = require('../models/Enrolment');
 
+// Global in-memory platform settings store with fallback defaults
+let platformSettings = {
+  siteTitle: 'EduVerse LMS',
+  supportEmail: 'support@eduverse.com',
+  currency: 'USD',
+  allowInstructorSignups: true,
+  requireEmailVerification: false,
+  maintenanceMode: false,
+  accentColor: '#11337B',
+};
+
 // @desc    Get system-wide admin dashboard statistics
 // @route   GET /api/admin/dashboard-stats
 // @access  Private (Admin Only)
@@ -198,6 +209,42 @@ const getCoursesReport = async (req, res, next) => {
   }
 };
 
+// @desc    Get platform settings
+// @route   GET /api/admin/settings
+// @access  Private (Admin Only)
+const getSettings = async (req, res, next) => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: platformSettings,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update platform settings
+// @route   PUT /api/admin/settings
+// @access  Private (Admin Only)
+const updateSettings = async (req, res, next) => {
+  try {
+    platformSettings = {
+      ...platformSettings,
+      ...req.body,
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Platform configuration updated successfully!',
+      data: platformSettings,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get user directory with filtering & search
 // @route   GET /api/admin/users
 // @access  Private (Admin Only)
@@ -368,6 +415,8 @@ module.exports = {
   getFinancialReport,
   getUsersReport,
   getCoursesReport,
+  getSettings,
+  updateSettings,
   getAdminUsers,
   updateUserRole,
   approveInstructor,

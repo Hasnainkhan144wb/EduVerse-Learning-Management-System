@@ -42,6 +42,8 @@ import ManageCourses from './pages/admin/ManageCourses';
 import ManageCategories from './pages/admin/ManageCategories';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import Reports from './pages/admin/Reports';
+import ManageCertificates from './pages/admin/ManageCertificates';
+import PlatformSettings from './pages/admin/PlatformSettings';
 
 function App() {
   const { loading } = useAuth();
@@ -158,6 +160,8 @@ function App() {
         <Route path="users" element={<ManageUsers />} />
         <Route path="reports" element={<Reports />} />
         <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="certificates" element={<ManageCertificates />} />
+        <Route path="settings" element={<PlatformSettings />} />
       </Route>
 
       {/* Fallback & Unauthorized Routes */}

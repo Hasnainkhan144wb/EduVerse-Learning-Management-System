@@ -7,6 +7,8 @@ const {
   getFinancialReport,
   getUsersReport,
   getCoursesReport,
+  getSettings,
+  updateSettings,
   getAdminUsers,
   updateUserRole,
   approveInstructor,
@@ -25,6 +27,8 @@ router.get('/analytics', requireAdmin, getPlatformAnalytics);
 router.get('/reports/financial', requireAdmin, getFinancialReport);
 router.get('/reports/users', requireAdmin, getUsersReport);
 router.get('/reports/courses', requireAdmin, getCoursesReport);
+router.get('/settings', requireAdmin, getSettings);
+router.put('/settings', requireAdmin, updateSettings);
 router.get('/users', requireAdmin, getAdminUsers);
 router.patch('/users/:id/role', requireAdmin, updateUserRole);
 router.patch('/users/:id/approve-instructor', requireAdmin, approveInstructor);
