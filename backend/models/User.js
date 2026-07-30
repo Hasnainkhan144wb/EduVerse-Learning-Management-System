@@ -35,9 +35,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    status: {
+      type: String,
+      enum: ['Pending', 'Active', 'Rejected'],
+      default: 'Pending',
+    },
     isApproved: {
       type: Boolean,
-      default: true,
+      default: false,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    approvedAt: {
+      type: Date,
     },
     wishlist: [
       {

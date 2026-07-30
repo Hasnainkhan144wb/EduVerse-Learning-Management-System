@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { FiBookOpen, FiMail, FiLock, FiArrowRight } from 'react-icons/fi';
+import { FiBookOpen, FiMail, FiLock, FiArrowRight, FiClock, FiAlertTriangle } from 'react-icons/fi';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [approvalNotice, setApprovalNotice] = useState(null);
 
   const from = location.state?.from?.pathname || null;
 
@@ -23,6 +24,7 @@ const LoginPage = () => {
       return;
     }
 
+    setApprovalNotice(null);
     setLoading(true);
     const result = await login(email, password);
     setLoading(false);
@@ -39,6 +41,9 @@ const LoginPage = () => {
         navigate('/student', { replace: true });
       }
     } else {
+      if (result.message && (result.message.includes('awaiting administrator approval') || result.message.includes('rejected'))) {
+        setApprovalNotice(result.message);
+      }
       toast.error(result.message);
     }
   };
@@ -61,6 +66,22 @@ const LoginPage = () => {
           <h2 className="text-2xl font-extrabold text-white">Welcome Back</h2>
           <p className="text-xs text-slate-400">Sign in to your student or instructor workspace</p>
         </div>
+
+        {approvalNotice && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs leading-relaxed space-y-2 flex items-start gap-3">
+            {approvalNotice.includes('rejected') ? (
+              <FiAlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            ) : (
+              <FiClock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+            )}
+            <div>
+              <p className="font-semibold text-white mb-1">
+                {approvalNotice.includes('rejected') ? 'Account Request Rejected' : 'Account Approval Pending'}
+              </p>
+              <p>{approvalNotice}</p>
+            </div>
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

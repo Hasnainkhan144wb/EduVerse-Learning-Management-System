@@ -38,13 +38,26 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // Verify Account Verification Approval (Block unapproved accounts unless Admin)
-    if (user.role !== 'Admin' && user.isApproved === false) {
-      return res.status(403).json({
-        success: false,
-        isPendingApproval: true,
-        message: 'Forbidden: Your account is pending Admin approval. Please wait for verification.',
-      });
+    // Verify Account Verification Approval (Block Pending and Rejected accounts unless Admin)
+    if (user.role !== 'Admin') {
+      if (user.status === 'Rejected') {
+        return res.status(403).json({
+          success: false,
+          status: 'Rejected',
+          isApproved: false,
+          message: 'Your registration request has been rejected. Please contact the administrator.',
+        });
+      }
+
+      if (user.status === 'Pending' || user.isApproved === false || !user.isApproved) {
+        return res.status(403).json({
+          success: false,
+          status: 'Pending',
+          isApproved: false,
+          isPendingApproval: true,
+          message: 'Your account is awaiting administrator approval. You will be able to access your dashboard after your account has been verified.',
+        });
+      }
     }
 
     req.user = user;

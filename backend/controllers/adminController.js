@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Course = require('../models/Course');
 const Category = require('../models/Category');
 const Enrolment = require('../models/Enrolment');
+const Notification = require('../models/Notification');
 
 // Global in-memory platform settings store with fallback defaults
 let platformSettings = {
@@ -23,13 +24,15 @@ const getDashboardStats = async (req, res, next) => {
       totalStudents,
       totalInstructors,
       pendingInstructors,
+      pendingUsersCount,
       totalCourses,
       publishedCourses,
       totalEnrolments,
     ] = await Promise.all([
       User.countDocuments({ role: 'Student' }),
       User.countDocuments({ role: 'Instructor' }),
-      User.countDocuments({ role: 'Instructor', isApproved: false }),
+      User.countDocuments({ role: 'Instructor', $or: [{ isApproved: false }, { status: 'Pending' }] }),
+      User.countDocuments({ $or: [{ status: 'Pending' }, { isApproved: false }], role: { $ne: 'Admin' } }),
       Course.countDocuments(),
       Course.countDocuments({ status: 'Published' }),
       Enrolment.countDocuments(),
@@ -44,11 +47,133 @@ const getDashboardStats = async (req, res, next) => {
         totalStudents,
         totalInstructors,
         pendingInstructors,
+        pendingUsers: pendingUsersCount,
         totalCourses,
         publishedCourses,
         totalEnrolments,
         totalRevenue: Math.round(totalRevenue),
       },
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get pending users awaiting admin approval
+// @route   GET /api/admin/pending-users
+// @access  Private (Admin Only)
+const getPendingUsers = async (req, res, next) => {
+  try {
+    const pendingUsers = await User.find({
+      $or: [{ status: 'Pending' }, { isApproved: false }],
+      role: { $ne: 'Admin' },
+    })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: pendingUsers.length,
+      data: pendingUsers,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Approve user account (Set status = Active, isApproved = true, store audit approvedBy & approvedAt)
+// @route   PATCH /api/admin/users/:id/approve
+// @access  Private (Admin Only)
+const approveUserAccount = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.status = 'Active';
+    user.isApproved = true;
+    user.approvedBy = req.user?._id;
+    user.approvedAt = new Date();
+
+    await user.save();
+
+    // Create Notification for the approved user
+    await Notification.create({
+      userId: user._id,
+      title: 'Account Approved! 🎉',
+      message: 'Your account has been approved. You can now log in and access the LMS.',
+      type: 'approval',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.name} account approved successfully`,
+      data: user,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Reject user account (Set status = Rejected, isApproved = false, store audit approvedBy & approvedAt)
+// @route   PATCH /api/admin/users/:id/reject
+// @access  Private (Admin Only)
+const rejectUserAccount = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.status = 'Rejected';
+    user.isApproved = false;
+    user.approvedBy = req.user?._id;
+    user.approvedAt = new Date();
+
+    await user.save();
+
+    // Create Notification for the rejected user
+    await Notification.create({
+      userId: user._id,
+      title: 'Registration Rejected',
+      message: 'Your registration request has been rejected.',
+      type: 'approval',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.name} registration request rejected`,
+      data: user,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get admin notification alerts
+// @route   GET /api/admin/notifications
+// @access  Private (Admin Only)
+const getAdminNotifications = async (req, res, next) => {
+  try {
+    const notifications = await Notification.find({
+      type: { $in: ['admin_alert', 'system'] },
+    })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.status(200).json({
+      success: true,
+      count: notifications.length,
+      data: notifications,
     });
   } catch (error) {
     if (typeof next === 'function') next(error);
@@ -250,14 +375,16 @@ const updateSettings = async (req, res, next) => {
 // @access  Private (Admin Only)
 const getAdminUsers = async (req, res, next) => {
   try {
-    const { role, search, isApproved } = req.query;
+    const { role, search, isApproved, status } = req.query;
     const query = {};
 
     if (role && role !== 'All') {
       query.role = role;
     }
 
-    if (isApproved !== undefined && isApproved !== '') {
+    if (status && status !== 'All') {
+      query.status = status;
+    } else if (isApproved !== undefined && isApproved !== '') {
       query.isApproved = isApproved === 'true';
     }
 
@@ -289,7 +416,7 @@ const getAdminUsers = async (req, res, next) => {
 const updateUserRole = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { role, isApproved } = req.body;
+    const { role, isApproved, status } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
@@ -297,40 +424,19 @@ const updateUserRole = async (req, res, next) => {
     }
 
     if (role) user.role = role;
-    if (isApproved !== undefined) user.isApproved = isApproved;
+    if (status) {
+      user.status = status;
+      user.isApproved = status === 'Active';
+    } else if (isApproved !== undefined) {
+      user.isApproved = isApproved;
+      user.status = isApproved ? 'Active' : 'Pending';
+    }
 
     await user.save();
 
     res.status(200).json({
       success: true,
       message: `User ${user.name} role/status updated successfully`,
-      data: user,
-    });
-  } catch (error) {
-    if (typeof next === 'function') next(error);
-    else res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Approve / verify user account
-// @route   PATCH /api/admin/users/:id/approve
-// @access  Private (Admin Only)
-const approveUser = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { isApproved } = req.body;
-
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    user.isApproved = isApproved !== undefined ? isApproved : true;
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: `User ${user.name} verification status set to ${user.isApproved}`,
       data: user,
     });
   } catch (error) {
@@ -353,11 +459,14 @@ const approveInstructor = async (req, res, next) => {
     }
 
     user.isApproved = isApproved !== undefined ? isApproved : true;
+    user.status = user.isApproved ? 'Active' : 'Pending';
+    user.approvedBy = req.user?._id;
+    user.approvedAt = new Date();
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: `Instructor ${user.name} approval status updated to ${user.isApproved}`,
+      message: `Instructor ${user.name} approval status updated to ${user.status}`,
       data: user,
     });
   } catch (error) {
@@ -462,6 +571,10 @@ const getAdminCategories = async (req, res, next) => {
 
 module.exports = {
   getDashboardStats,
+  getPendingUsers,
+  approveUserAccount,
+  rejectUserAccount,
+  getAdminNotifications,
   getPlatformAnalytics,
   getFinancialReport,
   getUsersReport,
@@ -470,7 +583,6 @@ module.exports = {
   updateSettings,
   getAdminUsers,
   updateUserRole,
-  approveUser,
   approveInstructor,
   deleteUser,
   getAdminCourses,

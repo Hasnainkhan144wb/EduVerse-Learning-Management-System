@@ -12,6 +12,7 @@ import {
   FiX,
   FiTrash2,
   FiShield,
+  FiUserCheck,
 } from 'react-icons/fi';
 
 const ManageUsers = () => {
@@ -46,26 +47,35 @@ const ManageUsers = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Handle Approve / Verify User
-  const handleApproveUser = async (userId, isApprove = true) => {
+  // Handle Approve User
+  const handleApproveUser = async (userId) => {
     try {
-      const response = await api.patch(`/admin/users/${userId}/approve`, {
-        isApproved: isApprove,
-      });
-
+      const response = await api.patch(`/admin/users/${userId}/approve`);
       if (response.data.success) {
-        toast.success(
-          isApprove
-            ? 'User account verified and approved! 🎓'
-            : 'User verification status revoked.'
-        );
+        toast.success('User account approved and activated! 🎉');
         fetchUsers();
         if (editUserModal && editUserModal._id === userId) {
-          setEditUserModal((prev) => ({ ...prev, isApproved: isApprove }));
+          setEditUserModal((prev) => ({ ...prev, status: 'Active', isApproved: true }));
         }
       }
     } catch (err) {
-      toast.error('Failed to update user approval status');
+      toast.error('Failed to approve user account');
+    }
+  };
+
+  // Handle Reject User
+  const handleRejectUser = async (userId) => {
+    try {
+      const response = await api.patch(`/admin/users/${userId}/reject`);
+      if (response.data.success) {
+        toast.success('User registration request rejected.');
+        fetchUsers();
+        if (editUserModal && editUserModal._id === userId) {
+          setEditUserModal((prev) => ({ ...prev, status: 'Rejected', isApproved: false }));
+        }
+      }
+    } catch (err) {
+      toast.error('Failed to reject user account');
     }
   };
 
@@ -88,10 +98,11 @@ const ManageUsers = () => {
     }
   };
 
-  // Filtered users for pending tab vs all tab
+  // Pending users count & filtered users
+  const pendingUsersList = users.filter((u) => u.status === 'Pending' || (!u.isApproved && u.role !== 'Admin'));
   const displayedUsers = users.filter((u) => {
     if (activeTab === 'pending') {
-      return u.role === 'Instructor' && !u.isApproved;
+      return u.status === 'Pending' || (!u.isApproved && u.role !== 'Admin');
     }
     return true;
   });
@@ -107,13 +118,13 @@ const ManageUsers = () => {
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="inline-block px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
-            Governance & User Control
+            Governance & User Approval System
           </span>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
             <FiUsers className="text-blue-500" /> Platform User Directory
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Manage student registrations, verify instructor applications, and configure access roles.
+            Review student and instructor registrations, approve access, or reject applications.
           </p>
         </div>
 
@@ -137,8 +148,7 @@ const ManageUsers = () => {
                 : 'text-slate-400 hover:text-amber-400'
             }`}
           >
-            Pending Approvals (
-            {users.filter((u) => u.role === 'Instructor' && !u.isApproved).length})
+            <FiUserCheck className="w-3.5 h-3.5" /> Pending Approvals ({pendingUsersList.length})
           </button>
         </div>
       </div>
@@ -189,28 +199,41 @@ const ManageUsers = () => {
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="bg-slate-950 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
                 <tr>
-                  <th className="py-3.5 px-4">User Info</th>
-                  <th className="py-3.5 px-4">Role Badge</th>
-                  <th className="py-3.5 px-4">Verification Status</th>
-                  <th className="py-3.5 px-4">Date Joined</th>
+                  <th className="py-3.5 px-4">Profile</th>
+                  <th className="py-3.5 px-4">Full Name</th>
+                  <th className="py-3.5 px-4">Email</th>
+                  <th className="py-3.5 px-4">Role</th>
+                  <th className="py-3.5 px-4">Registration Date</th>
+                  <th className="py-3.5 px-4">Current Status</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {displayedUsers.map((user) => {
-                  const isInstructor = user.role === 'Instructor';
+                  const isPending = user.status === 'Pending' || (!user.isApproved && user.role !== 'Admin');
+                  const isRejected = user.status === 'Rejected';
 
                   return (
                     <tr key={user._id} className="hover:bg-slate-800/40 transition">
-                      {/* Name & Email */}
-                      <td className="py-4 px-4 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 font-bold text-xs flex items-center justify-center border border-blue-500/30">
-                          {user.name?.charAt(0) || 'U'}
+                      {/* Avatar */}
+                      <td className="py-4 px-4">
+                        <div className="w-9 h-9 rounded-full bg-blue-600/20 text-blue-400 font-bold text-xs flex items-center justify-center border border-blue-500/30 overflow-hidden">
+                          {user.avatar ? (
+                            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                          ) : (
+                            user.name?.charAt(0) || 'U'
+                          )}
                         </div>
-                        <div>
-                          <p className="font-bold text-xs text-white">{user.name}</p>
-                          <p className="text-[11px] text-slate-400">{user.email}</p>
-                        </div>
+                      </td>
+
+                      {/* Full Name */}
+                      <td className="py-4 px-4 font-bold text-xs text-white">
+                        {user.name}
+                      </td>
+
+                      {/* Email */}
+                      <td className="py-4 px-4 text-xs text-slate-400">
+                        {user.email}
                       </td>
 
                       {/* Role Badge */}
@@ -228,45 +251,52 @@ const ManageUsers = () => {
                         </span>
                       </td>
 
-                      {/* Verification Status */}
-                      <td className="py-4 px-4">
-                        {isInstructor ? (
-                          user.isApproved ? (
-                            <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
-                              <FiCheckCircle /> Verified Instructor
-                            </span>
-                          ) : (
-                            <span className="text-amber-400 text-xs font-semibold flex items-center gap-1">
-                              <FiXCircle /> Pending Verification
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-slate-400 text-xs flex items-center gap-1">
-                            <FiCheckCircle className="text-emerald-400" /> Active Account
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Date Joined */}
+                      {/* Registration Date */}
                       <td className="py-4 px-4 text-xs text-slate-400">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </td>
 
-                      {/* Actions */}
+                      {/* Current Status */}
+                      <td className="py-4 px-4">
+                        {isRejected ? (
+                          <span className="px-2.5 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full text-xs font-semibold flex items-center gap-1.5 w-max">
+                            <FiXCircle className="w-3.5 h-3.5" /> Rejected
+                          </span>
+                        ) : isPending ? (
+                          <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-xs font-semibold flex items-center gap-1.5 w-max">
+                            <FiXCircle className="w-3.5 h-3.5" /> Pending Verification
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold flex items-center gap-1.5 w-max">
+                            <FiCheckCircle className="w-3.5 h-3.5" /> Active
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions: Approve / Reject / View Details */}
                       <td className="py-4 px-4 text-right space-x-2">
-                        <button
-                          onClick={() => setSelectedUserModal(user)}
-                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition inline-flex items-center"
-                          title="View Details"
-                        >
-                          <FiEye className="w-4 h-4" />
-                        </button>
+                        {isPending && (
+                          <>
+                            <button
+                              onClick={() => handleApproveUser(user._id)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition inline-flex items-center gap-1"
+                            >
+                              <FiCheckCircle /> Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectUser(user._id)}
+                              className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1 border border-rose-500/30"
+                            >
+                              <FiXCircle /> Reject
+                            </button>
+                          </>
+                        )}
 
                         <button
-                          onClick={() => setEditUserModal(user)}
-                          className="px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1 border border-blue-500/30"
+                          onClick={() => setSelectedUserModal(user)}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition inline-flex items-center gap-1"
                         >
-                          Edit
+                          <FiEye /> View Details
                         </button>
                       </td>
                     </tr>
@@ -290,8 +320,12 @@ const ManageUsers = () => {
             >
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 font-bold text-base flex items-center justify-center border border-blue-500/30">
-                    {selectedUserModal.name?.charAt(0) || 'U'}
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 font-bold text-base flex items-center justify-center border border-blue-500/30 overflow-hidden">
+                    {selectedUserModal.avatar ? (
+                      <img src={selectedUserModal.avatar} alt={selectedUserModal.name} className="w-full h-full object-cover" />
+                    ) : (
+                      selectedUserModal.name?.charAt(0) || 'U'
+                    )}
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-white">
@@ -315,9 +349,9 @@ const ManageUsers = () => {
                     <p className="font-bold text-white mt-0.5">{selectedUserModal.role}</p>
                   </div>
                   <div>
-                    <span className="text-slate-500">Approval Status</span>
-                    <p className="font-bold text-emerald-400 mt-0.5">
-                      {selectedUserModal.isApproved ? 'Verified' : 'Pending Verification'}
+                    <span className="text-slate-500">Current Status</span>
+                    <p className={`font-bold mt-0.5 ${selectedUserModal.status === 'Active' || selectedUserModal.isApproved ? 'text-emerald-400' : selectedUserModal.status === 'Rejected' ? 'text-rose-400' : 'text-amber-400'}`}>
+                      {selectedUserModal.status || (selectedUserModal.isApproved ? 'Active' : 'Pending')}
                     </p>
                   </div>
                   <div>
@@ -335,99 +369,34 @@ const ManageUsers = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                {selectedUserModal.status === 'Pending' && (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleApproveUser(selectedUserModal._id);
+                        setSelectedUserModal(null);
+                      }}
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition"
+                    >
+                      Approve User
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleRejectUser(selectedUserModal._id);
+                        setSelectedUserModal(null);
+                      }}
+                      className="px-4 py-2.5 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-md transition"
+                    >
+                      Reject User
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => setSelectedUserModal(null)}
                   className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
                 >
                   Close Profile
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* EDIT USER MODAL (Approve & Delete Actions) */}
-      <AnimatePresence>
-        {editUserModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6"
-            >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-600/20 text-blue-400 font-bold text-xs flex items-center justify-center border border-blue-500/30">
-                    {editUserModal.name?.charAt(0) || 'U'}
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-white">Edit User Parameters</h3>
-                    <p className="text-xs text-slate-400">{editUserModal.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setEditUserModal(null)}
-                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
-                >
-                  <FiX className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Full Name:</span>
-                    <span className="font-bold text-white">{editUserModal.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Role:</span>
-                    <span className="font-bold text-indigo-400">{editUserModal.role}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Status:</span>
-                    <span
-                      className={`font-bold ${
-                        editUserModal.isApproved ? 'text-emerald-400' : 'text-amber-400'
-                      }`}
-                    >
-                      {editUserModal.isApproved ? 'Verified Account' : 'Pending Verification'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  {/* Approve / Verify User Button */}
-                  <button
-                    onClick={() => handleApproveUser(editUserModal._id, !editUserModal.isApproved)}
-                    className={`w-full py-3 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition ${
-                      editUserModal.isApproved
-                        ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30 hover:bg-amber-600 hover:text-white'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
-                    }`}
-                  >
-                    <FiShield className="w-4 h-4" />
-                    {editUserModal.isApproved ? 'Revoke Verification' : 'Approve User Account'}
-                  </button>
-
-                  {/* Delete User Button */}
-                  <button
-                    onClick={() => handleDeleteUser(editUserModal)}
-                    className="w-full py-3 px-4 bg-red-600/10 border border-red-500/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-extrabold rounded-xl transition flex items-center justify-center gap-2"
-                  >
-                    <FiTrash2 className="w-4 h-4" /> Delete User Permanently
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 border-t border-slate-800">
-                <button
-                  onClick={() => setEditUserModal(null)}
-                  className="px-5 py-2.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-700 transition"
-                >
-                  Close Modal
                 </button>
               </div>
             </motion.div>

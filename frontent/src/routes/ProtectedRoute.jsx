@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiClock, FiShield, FiAlertTriangle, FiRefreshCw, FiLogOut } from 'react-icons/fi';
+import { FiClock, FiAlertTriangle, FiRefreshCw, FiLogOut, FiXCircle } from 'react-icons/fi';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user, loading, checkAuthStatus, logout } = useAuth();
@@ -22,8 +22,39 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Account Approval Verification Check (Instructors and unapproved accounts)
-  if (user && user.role !== 'Admin' && user.isApproved === false) {
+  // Handle Rejected status
+  if (user && user.role !== 'Admin' && user.status === 'Rejected') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
+          <div className="w-16 h-16 bg-rose-500/10 text-rose-400 rounded-2xl flex items-center justify-center mx-auto text-3xl border border-rose-500/20">
+            <FiXCircle />
+          </div>
+          <div className="space-y-2">
+            <span className="px-3 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 w-max mx-auto">
+              <FiAlertTriangle className="w-3.5 h-3.5" /> Registration Rejected
+            </span>
+            <h2 className="text-2xl font-extrabold text-white">Account Rejected</h2>
+            <p className="text-slate-300 text-xs leading-relaxed">
+              Your registration request has been rejected. Please contact the administrator.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={logout}
+              className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2"
+            >
+              <FiLogOut className="w-4 h-4" /> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Account Approval Verification Check (Pending status or isApproved false)
+  if (user && user.role !== 'Admin' && (user.status === 'Pending' || user.isApproved === false || !user.isApproved)) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
@@ -34,9 +65,9 @@ const ProtectedRoute = ({ children }) => {
             <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 w-max mx-auto">
               <FiAlertTriangle className="w-3.5 h-3.5" /> Verification Required
             </span>
-            <h2 className="text-2xl font-extrabold text-white">Account Pending Approval</h2>
-            <p className="text-slate-400 text-xs leading-relaxed">
-              Hello <strong className="text-white">{user.name}</strong>, your account is currently under administrative review. Access to course dashboards will be granted as soon as an administrator verifies your application.
+            <h2 className="text-2xl font-extrabold text-white">Account Awaiting Approval</h2>
+            <p className="text-slate-300 text-xs leading-relaxed">
+              Your account is awaiting administrator approval. You will be able to access your dashboard after your account has been verified.
             </p>
           </div>
 

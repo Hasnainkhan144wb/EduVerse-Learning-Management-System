@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Register new user (Student / Instructor / Admin)
@@ -32,17 +33,32 @@ const registerUser = async (req, res) => {
     const validRoles = ['Student', 'Instructor', 'Admin'];
     const userRole = validRoles.includes(role) ? role : 'Student';
 
-    // 4. Create User (password hashing automatically handled by User pre-save hook)
+    // 4. Set approval status: Admin -> Active, Student/Instructor -> Pending
+    const isInitialAdmin = userRole === 'Admin';
+    const status = isInitialAdmin ? 'Active' : 'Pending';
+    const isApproved = isInitialAdmin;
+
+    // 5. Create User (password hashing automatically handled by User pre-save hook)
     const user = await User.create({
       name,
       email,
       password,
       role: userRole,
       avatar: avatar || '',
-      isApproved: true,
+      status,
+      isApproved,
     });
 
-    // 5. Generate Token
+    // 6. Create Admin Notification for non-Admin registrations
+    if (!isInitialAdmin) {
+      await Notification.create({
+        title: `New ${userRole} Registration`,
+        message: `New ${userRole} Registration\n\n${name}\n\nEmail:\n${email}\n\nStatus:\nPending Verification`,
+        type: 'admin_alert',
+      });
+    }
+
+    // 7. Generate Token
     const jwtSecret = process.env.JWT_SECRET || 'eduverse_super_secret_jwt_key_2026';
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -55,6 +71,7 @@ const registerUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      status: user.status,
       avatar: user.avatar,
       isApproved: user.isApproved,
     };
@@ -62,6 +79,9 @@ const registerUser = async (req, res) => {
     return res.status(201).json({
       success: true,
       token,
+      message: isInitialAdmin
+        ? 'Admin registration successful!'
+        : 'Registration successful! Your account is pending administrator approval.',
       data: { ...userPayload, token },
       user: userPayload,
     });
@@ -107,6 +127,29 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Check account status & verification (for non-Admin roles)
+    if (user.role !== 'Admin') {
+      if (user.status === 'Rejected') {
+        return res.status(403).json({
+          success: false,
+          status: 'Rejected',
+          isVerified: false,
+          isApproved: false,
+          message: 'Your registration request has been rejected. Please contact the administrator.',
+        });
+      }
+
+      if (user.status === 'Pending' || user.isApproved === false || !user.isApproved) {
+        return res.status(403).json({
+          success: false,
+          status: 'Pending',
+          isVerified: false,
+          isApproved: false,
+          message: 'Your account is awaiting administrator approval. You will be able to access your dashboard after your account has been verified.',
+        });
+      }
+    }
+
     const token = generateToken(user._id, user.role);
 
     const userPayload = {
@@ -114,6 +157,7 @@ const loginUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      status: user.status || 'Active',
       avatar: user.avatar,
       isApproved: user.isApproved,
     };
