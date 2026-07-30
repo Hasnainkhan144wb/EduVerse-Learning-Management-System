@@ -24,6 +24,7 @@ import {
   FiClock,
   FiEye,
   FiX,
+  FiLayers,
 } from 'react-icons/fi';
 
 const chartData = [
@@ -54,28 +55,28 @@ const AdminDashboard = () => {
     totalRevenue: 0,
   });
   const [pendingUsers, setPendingUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [selectedUserModal, setSelectedUserModal] = useState(null);
 
   const fetchAdminStats = async () => {
     try {
-      setLoading(true);
+      setLoadingStats(true);
       const [statsRes, pendingRes] = await Promise.all([
         api.get('/admin/dashboard-stats').catch(() => null),
         api.get('/admin/pending-users').catch(() => null),
       ]);
 
-      if (statsRes && statsRes.data.success) {
+      if (statsRes && statsRes.data && statsRes.data.success) {
         setStats(statsRes.data.data);
       }
 
-      if (pendingRes && pendingRes.data.success) {
+      if (pendingRes && pendingRes.data && pendingRes.data.success) {
         setPendingUsers(pendingRes.data.data || []);
       }
     } catch (err) {
       console.error('Error loading admin dashboard stats:', err);
     } finally {
-      setLoading(false);
+      setLoadingStats(false);
     }
   };
 
@@ -86,7 +87,7 @@ const AdminDashboard = () => {
   const handleApproveUser = async (userId) => {
     try {
       const response = await api.patch(`/admin/users/${userId}/approve`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast.success('User approved successfully! 🎉');
         fetchAdminStats();
       }
@@ -98,7 +99,7 @@ const AdminDashboard = () => {
   const handleRejectUser = async (userId) => {
     try {
       const response = await api.patch(`/admin/users/${userId}/reject`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast.success('User registration request rejected.');
         fetchAdminStats();
       }
@@ -112,70 +113,125 @@ const AdminDashboard = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-8"
+      className="space-y-8 font-sans"
     >
       {/* Banner Header */}
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="inline-block px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
-            Master Control Panel • System Governance
+            Master Control Panel • Live Real-Time Data
           </span>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
-            <FiShield className="text-blue-500" /> Platform Governance & User Approvals
+            <FiShield className="text-blue-500" /> Platform Governance & Dashboard Statistics
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Review pending student and instructor applications, approve access, and monitor platform metrics.
+            Real-time platform metrics, pending user verification queue, and course distribution stats.
           </p>
         </div>
       </div>
 
-      {/* Summary Metric Widgets */}
+      {/* Summary Metric Widgets (Powered by Real Database Data) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Total Revenue Card */}
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xl font-bold border border-emerald-500/30">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xl font-bold border border-emerald-500/30 shrink-0">
             <FiDollarSign />
           </div>
-          <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase">Total Revenue</p>
-            <p className="text-2xl font-extrabold text-white mt-0.5">
-              ${stats.totalRevenue ? stats.totalRevenue.toLocaleString() : '42,850'}
-            </p>
+          <div className="min-w-0">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Revenue</p>
+            {loadingStats ? (
+              <div className="h-7 w-24 bg-slate-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-extrabold text-white mt-0.5 truncate">
+                ${(stats.totalRevenue || 0).toLocaleString()}
+              </p>
+            )}
           </div>
         </div>
 
+        {/* Active Students Card */}
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-xl font-bold border border-indigo-500/30">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-xl font-bold border border-indigo-500/30 shrink-0">
             <FiUsers />
           </div>
-          <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase">Active Students</p>
-            <p className="text-2xl font-extrabold text-white mt-0.5">
-              {stats.totalStudents || 1420}
-            </p>
+          <div className="min-w-0">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Students</p>
+            {loadingStats ? (
+              <div className="h-7 w-20 bg-slate-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-extrabold text-white mt-0.5 truncate">
+                {stats.totalStudents || 0}
+              </p>
+            )}
           </div>
         </div>
 
+        {/* Verified Instructors Card */}
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
-          <div className="w-12 h-12 rounded-2xl bg-purple-600/20 text-purple-400 flex items-center justify-center text-xl font-bold border border-purple-500/30">
+          <div className="w-12 h-12 rounded-2xl bg-purple-600/20 text-purple-400 flex items-center justify-center text-xl font-bold border border-purple-500/30 shrink-0">
             <FiUserCheck />
           </div>
+          <div className="min-w-0">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Instructors</p>
+            {loadingStats ? (
+              <div className="h-7 w-20 bg-slate-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-extrabold text-white mt-0.5 truncate">
+                {stats.totalInstructors || 0}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Pending Approvals Card */}
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
+          <div className="w-12 h-12 rounded-2xl bg-amber-600/20 text-amber-400 flex items-center justify-center text-xl font-bold border border-amber-500/30 shrink-0">
+            <FiClock />
+          </div>
+          <div className="min-w-0">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Pending Approvals</p>
+            {loadingStats ? (
+              <div className="h-7 w-16 bg-slate-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-2xl font-extrabold text-amber-400 mt-0.5 truncate">
+                {stats.pendingUsers !== undefined ? stats.pendingUsers : pendingUsers.length}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Published Courses & System Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 flex items-center justify-center text-xl font-bold border border-blue-500/30 shrink-0">
+            <FiLayers />
+          </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase">Verified Instructors</p>
-            <p className="text-2xl font-extrabold text-white mt-0.5">
-              {stats.totalInstructors || 48}
-            </p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Published / Total Courses</p>
+            {loadingStats ? (
+              <div className="h-7 w-24 bg-slate-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-extrabold text-white mt-0.5">
+                <span className="text-blue-400">{stats.publishedCourses || 0}</span> / {stats.totalCourses || 0}
+              </p>
+            )}
           </div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
-          <div className="w-12 h-12 rounded-2xl bg-amber-600/20 text-amber-400 flex items-center justify-center text-xl font-bold border border-amber-500/30">
-            <FiClock />
+          <div className="w-12 h-12 rounded-2xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center text-xl font-bold border border-cyan-500/30 shrink-0">
+            <FiBookOpen />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase">Pending Approvals</p>
-            <p className="text-2xl font-extrabold text-amber-400 mt-0.5">
-              {stats.pendingUsers || pendingUsers.length}
-            </p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Course Enrolments</p>
+            {loadingStats ? (
+              <div className="h-7 w-20 bg-slate-800 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-extrabold text-white mt-0.5">
+                {stats.totalEnrolments || 0} Enrolments
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -265,10 +321,15 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {pendingUsers.length === 0 ? (
+        {loadingStats && pendingUsers.length === 0 ? (
+          <div className="p-8 text-center bg-slate-950/60 border border-slate-800 rounded-2xl">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <p className="text-xs text-slate-400">Loading pending verification requests...</p>
+          </div>
+        ) : pendingUsers.length === 0 ? (
           <div className="p-8 text-center bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2">
             <FiCheckCircle className="text-emerald-400 text-2xl mx-auto" />
-            <p className="text-xs text-slate-300 font-bold">No pending user verification requests</p>
+            <p className="text-xs text-slate-200 font-bold">No pending user approval requests.</p>
             <p className="text-[11px] text-slate-500">All registered users have been reviewed and approved.</p>
           </div>
         ) : (
