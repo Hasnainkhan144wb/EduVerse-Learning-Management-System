@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed:admin": "node seeders/adminSeeder.js",
-    "seed:all": "node seeders/masterSeeder.js"
+    "seed:all": "node seeders/masterSeeder.js",
+    "reset:admin": "node resetAdmin.js"
   },
   "keywords": [],
   "author": "",
