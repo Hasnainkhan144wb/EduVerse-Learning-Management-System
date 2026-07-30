@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Protect routes - Verify JWT token
+// Protect routes - Verify JWT token & user verification status
 const protect = async (req, res, next) => {
   let token;
 
@@ -35,6 +35,15 @@ const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'The user belonging to this token no longer exists',
+      });
+    }
+
+    // Verify Account Verification Approval (Block unapproved accounts unless Admin)
+    if (user.role !== 'Admin' && user.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        isPendingApproval: true,
+        message: 'Forbidden: Your account is pending Admin approval. Please wait for verification.',
       });
     }
 

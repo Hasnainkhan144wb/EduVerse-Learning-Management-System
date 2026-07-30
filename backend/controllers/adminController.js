@@ -312,6 +312,33 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
+// @desc    Approve / verify user account
+// @route   PATCH /api/admin/users/:id/approve
+// @access  Private (Admin Only)
+const approveUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { isApproved } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.isApproved = isApproved !== undefined ? isApproved : true;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.name} verification status set to ${user.isApproved}`,
+      data: user,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Approve or update instructor status
 // @route   PATCH /api/admin/users/:id/approve-instructor
 // @access  Private (Admin Only)
@@ -332,6 +359,30 @@ const approveInstructor = async (req, res, next) => {
       success: true,
       message: `Instructor ${user.name} approval status updated to ${user.isApproved}`,
       data: user,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Delete user completely from database
+// @route   DELETE /api/admin/users/:id
+// @access  Private (Admin Only)
+const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await user.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.name} removed successfully`,
     });
   } catch (error) {
     if (typeof next === 'function') next(error);
@@ -419,7 +470,9 @@ module.exports = {
   updateSettings,
   getAdminUsers,
   updateUserRole,
+  approveUser,
   approveInstructor,
+  deleteUser,
   getAdminCourses,
   updateCourseStatus,
   getAdminCategories,

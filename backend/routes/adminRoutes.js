@@ -11,7 +11,9 @@ const {
   updateSettings,
   getAdminUsers,
   updateUserRole,
+  approveUser,
   approveInstructor,
+  deleteUser,
   getAdminCourses,
   updateCourseStatus,
   getAdminCategories,
@@ -31,7 +33,9 @@ router.get('/settings', requireAdmin, getSettings);
 router.put('/settings', requireAdmin, updateSettings);
 router.get('/users', requireAdmin, getAdminUsers);
 router.patch('/users/:id/role', requireAdmin, updateUserRole);
+router.patch('/users/:id/approve', requireAdmin, approveUser);
 router.patch('/users/:id/approve-instructor', requireAdmin, approveInstructor);
+router.delete('/users/:id', requireAdmin, deleteUser);
 router.get('/courses', requireAdmin, getAdminCourses);
 router.patch('/courses/:id/status', requireAdmin, updateCourseStatus);
 router.get('/categories', requireAdmin, getAdminCategories);

@@ -8,13 +8,10 @@ import {
   FiFilter,
   FiCheckCircle,
   FiXCircle,
-  FiShield,
-  FiUser,
-  FiMail,
-  FiCalendar,
   FiEye,
   FiX,
-  FiEdit3,
+  FiTrash2,
+  FiShield,
 } from 'react-icons/fi';
 
 const ManageUsers = () => {
@@ -24,8 +21,7 @@ const ManageUsers = () => {
   const [selectedRole, setSelectedRole] = useState('All');
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'pending'
   const [selectedUserModal, setSelectedUserModal] = useState(null);
-  const [editRoleUser, setEditRoleUser] = useState(null);
-  const [newRole, setNewRole] = useState('');
+  const [editUserModal, setEditUserModal] = useState(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -50,38 +46,45 @@ const ManageUsers = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleApproveInstructor = async (userId, isApprove) => {
+  // Handle Approve / Verify User
+  const handleApproveUser = async (userId, isApprove = true) => {
     try {
-      const response = await api.patch(
-        `/admin/users/${userId}/approve-instructor`,
-        { isApproved: isApprove }
-      );
+      const response = await api.patch(`/admin/users/${userId}/approve`, {
+        isApproved: isApprove,
+      });
+
       if (response.data.success) {
         toast.success(
           isApprove
-            ? 'Instructor verified and approved! 🎓'
-            : 'Instructor approval status revoked.'
+            ? 'User account verified and approved! 🎓'
+            : 'User verification status revoked.'
         );
         fetchUsers();
+        if (editUserModal && editUserModal._id === userId) {
+          setEditUserModal((prev) => ({ ...prev, isApproved: isApprove }));
+        }
       }
     } catch (err) {
-      toast.error('Failed to update instructor status');
+      toast.error('Failed to update user approval status');
     }
   };
 
-  const handleRoleUpdate = async () => {
-    if (!editRoleUser || !newRole) return;
+  // Handle Delete User
+  const handleDeleteUser = async (user) => {
+    if (!user) return;
+    if (!window.confirm(`Are you sure you want to permanently delete user "${user.name}"?`)) {
+      return;
+    }
+
     try {
-      const response = await api.patch(`/admin/users/${editRoleUser._id}/role`, {
-        role: newRole,
-      });
+      const response = await api.delete(`/admin/users/${user._id}`);
       if (response.data.success) {
-        toast.success(`User role updated to ${newRole}!`);
-        setEditRoleUser(null);
+        toast.success(`User "${user.name}" deleted successfully`);
+        setEditUserModal(null);
         fetchUsers();
       }
     } catch (err) {
-      toast.error('Failed to update user role');
+      toast.error('Failed to delete user');
     }
   };
 
@@ -239,7 +242,7 @@ const ManageUsers = () => {
                           )
                         ) : (
                           <span className="text-slate-400 text-xs flex items-center gap-1">
-                            <FiCheckCircle className="text-slate-500" /> Active Account
+                            <FiCheckCircle className="text-emerald-400" /> Active Account
                           </span>
                         )}
                       </td>
@@ -253,31 +256,18 @@ const ManageUsers = () => {
                       <td className="py-4 px-4 text-right space-x-2">
                         <button
                           onClick={() => setSelectedUserModal(user)}
-                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition"
-                          title="View Profile Details"
+                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition inline-flex items-center"
+                          title="View Details"
                         >
                           <FiEye className="w-4 h-4" />
                         </button>
 
                         <button
-                          onClick={() => {
-                            setEditRoleUser(user);
-                            setNewRole(user.role);
-                          }}
-                          className="p-2 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-xl transition"
-                          title="Edit Role"
+                          onClick={() => setEditUserModal(user)}
+                          className="px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1 border border-blue-500/30"
                         >
-                          <FiEdit3 className="w-4 h-4" />
+                          Edit
                         </button>
-
-                        {isInstructor && !user.isApproved && (
-                          <button
-                            onClick={() => handleApproveInstructor(user._id, true)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1"
-                          >
-                            <FiCheckCircle /> Approve
-                          </button>
-                        )}
                       </td>
                     </tr>
                   );
@@ -288,7 +278,7 @@ const ManageUsers = () => {
         )}
       </div>
 
-      {/* USER DETAILS MODAL */}
+      {/* VIEW PROFILE MODAL */}
       <AnimatePresence>
         {selectedUserModal && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -358,9 +348,9 @@ const ManageUsers = () => {
         )}
       </AnimatePresence>
 
-      {/* EDIT ROLE MODAL */}
+      {/* EDIT USER MODAL (Approve & Delete Actions) */}
       <AnimatePresence>
-        {editRoleUser && (
+        {editUserModal && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -369,11 +359,17 @@ const ManageUsers = () => {
               className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6"
             >
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h3 className="text-base font-bold text-white">
-                  Update Role for {editRoleUser.name}
-                </h3>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-600/20 text-blue-400 font-bold text-xs flex items-center justify-center border border-blue-500/30">
+                    {editUserModal.name?.charAt(0) || 'U'}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Edit User Parameters</h3>
+                    <p className="text-xs text-slate-400">{editUserModal.email}</p>
+                  </div>
+                </div>
                 <button
-                  onClick={() => setEditRoleUser(null)}
+                  onClick={() => setEditUserModal(null)}
                   className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
                 >
                   <FiX className="w-5 h-5" />
@@ -381,32 +377,57 @@ const ManageUsers = () => {
               </div>
 
               <div className="space-y-4">
-                <label className="block text-xs font-semibold text-slate-300">
-                  Select User Role
-                </label>
-                <select
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl p-3 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Student">Student</option>
-                  <option value="Instructor">Instructor</option>
-                  <option value="Admin">Admin</option>
-                </select>
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Full Name:</span>
+                    <span className="font-bold text-white">{editUserModal.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Role:</span>
+                    <span className="font-bold text-indigo-400">{editUserModal.role}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Status:</span>
+                    <span
+                      className={`font-bold ${
+                        editUserModal.isApproved ? 'text-emerald-400' : 'text-amber-400'
+                      }`}
+                    >
+                      {editUserModal.isApproved ? 'Verified Account' : 'Pending Verification'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  {/* Approve / Verify User Button */}
+                  <button
+                    onClick={() => handleApproveUser(editUserModal._id, !editUserModal.isApproved)}
+                    className={`w-full py-3 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition ${
+                      editUserModal.isApproved
+                        ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30 hover:bg-amber-600 hover:text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
+                    }`}
+                  >
+                    <FiShield className="w-4 h-4" />
+                    {editUserModal.isApproved ? 'Revoke Verification' : 'Approve User Account'}
+                  </button>
+
+                  {/* Delete User Button */}
+                  <button
+                    onClick={() => handleDeleteUser(editUserModal)}
+                    className="w-full py-3 px-4 bg-red-600/10 border border-red-500/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-extrabold rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    <FiTrash2 className="w-4 h-4" /> Delete User Permanently
+                  </button>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end pt-2 border-t border-slate-800">
                 <button
-                  onClick={() => setEditRoleUser(null)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl"
+                  onClick={() => setEditUserModal(null)}
+                  className="px-5 py-2.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-700 transition"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRoleUpdate}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/30"
-                >
-                  Save Changes
+                  Close Modal
                 </button>
               </div>
             </motion.div>
