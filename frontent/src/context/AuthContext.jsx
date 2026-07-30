@@ -157,4 +157,16 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// EXPLICIT CUSTOM HOOK EXPORTS FOR COMPATIBILITY
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+// Alias export in case other components use useAuthContext
+export const useAuthContext = useAuth;
+
 export default AuthContext;
