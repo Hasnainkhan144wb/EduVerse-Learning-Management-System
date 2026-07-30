@@ -3,6 +3,7 @@ const router = express.Router();
 const { adminLogin } = require('../controllers/adminAuthController');
 const {
   getDashboardStats,
+  getPlatformAnalytics,
   getAdminUsers,
   updateUserRole,
   approveInstructor,
@@ -17,6 +18,7 @@ router.post('/login', adminLogin);
 
 // Protected Admin Routes (Strictly Enforced by requireAdmin Middleware)
 router.get('/dashboard-stats', requireAdmin, getDashboardStats);
+router.get('/analytics', requireAdmin, getPlatformAnalytics);
 router.get('/users', requireAdmin, getAdminUsers);
 router.patch('/users/:id/role', requireAdmin, updateUserRole);
 router.patch('/users/:id/approve-instructor', requireAdmin, approveInstructor);

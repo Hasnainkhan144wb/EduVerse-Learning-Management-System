@@ -40,6 +40,7 @@ import AdminDashboard from './admin/AdminDashboard';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageCourses from './pages/admin/ManageCourses';
 import ManageCategories from './pages/admin/ManageCategories';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
 
 function App() {
   const { loading } = useAuth();
@@ -154,7 +155,8 @@ function App() {
         <Route path="courses" element={<ManageCourses />} />
         <Route path="categories" element={<ManageCategories />} />
         <Route path="users" element={<ManageUsers />} />
-        <Route path="reports" element={<AdminDashboard />} />
+        <Route path="reports" element={<AdminAnalytics />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
       </Route>
 
       {/* Fallback & Unauthorized Routes */}
