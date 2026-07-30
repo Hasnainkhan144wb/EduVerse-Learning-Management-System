@@ -19,9 +19,9 @@ const quizRoutes = require('./routes/quizRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const discussionRoutes = require('./routes/discussionRoutes');
+const instructorRoutes = require('./routes/instructorRoutes');
 
-const { protect, authorize } = require('./middleware/authMiddleware');
-const { getInstructorStudents } = require('./controllers/enrolmentController');
+const { protect } = require('./middleware/authMiddleware');
 const { toggleWishlist } = require('./controllers/authController');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
@@ -57,6 +57,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/instructor', instructorRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrolments', enrolmentRoutes);
@@ -66,7 +67,6 @@ app.use('/api/certificates', certificateRoutes);
 app.use('/api/questions', discussionRoutes);
 
 // Direct Aliases
-app.get('/api/instructor/students', protect, authorize('Instructor', 'Admin'), getInstructorStudents);
 app.post('/api/users/wishlist', protect, toggleWishlist);
 
 // Health check endpoint
