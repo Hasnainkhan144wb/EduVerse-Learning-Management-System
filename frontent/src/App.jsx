@@ -7,9 +7,11 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import BrowseCourses from './pages/BrowseCourses';
 import CourseDetails from './pages/CourseDetails';
+import AdminLogin from './pages/admin/AdminLogin';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 import RoleBaseRoute from './routes/RoleBaseRoute';
+import AdminProtectedRoute from './routes/AdminProtectedRoute';
 
 import StudentLayout from './layouts/StudentLayout';
 import InstructorLayout from './layouts/InstructorLayout';
@@ -58,6 +60,9 @@ function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/courses" element={<BrowseCourses />} />
       <Route path="/courses/:id" element={<CourseDetails />} />
+
+      {/* Dedicated Isolated Admin Login Portal */}
+      <Route path="/admin" element={<AdminLogin />} />
 
       {/* Standalone Protected Checkout & Course Player & Take Quiz */}
       <Route
@@ -132,22 +137,21 @@ function App() {
         <Route path="analytics" element={<InstructorAnalytics />} />
       </Route>
 
-      {/* Protected Admin Layout & Command Center */}
+      {/* Protected Admin Layout & Command Center (Strict Admin Guard) */}
       <Route
-        path="/admin"
+        path="/admin/*"
         element={
-          <ProtectedRoute>
-            <RoleBaseRoute allowedRoles={['Admin']}>
-              <AdminLayout />
-            </RoleBaseRoute>
-          </ProtectedRoute>
+          <AdminProtectedRoute>
+            <AdminLayout />
+          </AdminProtectedRoute>
         }
       >
-        <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="approvals" element={<AdminDashboard />} />
         <Route path="courses" element={<AdminDashboard />} />
         <Route path="categories" element={<AdminDashboard />} />
         <Route path="users" element={<AdminDashboard />} />
+        <Route path="reports" element={<AdminDashboard />} />
       </Route>
 
       {/* Fallback & Unauthorized Routes */}
