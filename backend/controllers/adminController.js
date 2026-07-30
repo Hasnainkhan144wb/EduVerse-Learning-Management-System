@@ -45,13 +45,28 @@ const getDashboardStats = async (req, res, next) => {
   }
 };
 
-// @desc    Get user directory
+// @desc    Get user directory with filtering & search
 // @route   GET /api/admin/users
 // @access  Private (Admin Only)
 const getAdminUsers = async (req, res, next) => {
   try {
-    const { role } = req.query;
-    const query = role ? { role } : {};
+    const { role, search, isApproved } = req.query;
+    const query = {};
+
+    if (role && role !== 'All') {
+      query.role = role;
+    }
+
+    if (isApproved !== undefined && isApproved !== '') {
+      query.isApproved = isApproved === 'true';
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
 
     const users = await User.find(query)
       .select('-password')
@@ -61,6 +76,35 @@ const getAdminUsers = async (req, res, next) => {
       success: true,
       count: users.length,
       data: users,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update user role or block/unblock status
+// @route   PATCH /api/admin/users/:id/role
+// @access  Private (Admin Only)
+const updateUserRole = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { role, isApproved } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (role) user.role = role;
+    if (isApproved !== undefined) user.isApproved = isApproved;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.name} role/status updated successfully`,
+      data: user,
     });
   } catch (error) {
     if (typeof next === 'function') next(error);
@@ -168,6 +212,7 @@ const getAdminCategories = async (req, res, next) => {
 module.exports = {
   getDashboardStats,
   getAdminUsers,
+  updateUserRole,
   approveInstructor,
   getAdminCourses,
   updateCourseStatus,

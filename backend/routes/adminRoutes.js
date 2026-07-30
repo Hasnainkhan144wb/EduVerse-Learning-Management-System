@@ -4,6 +4,7 @@ const { adminLogin } = require('../controllers/adminAuthController');
 const {
   getDashboardStats,
   getAdminUsers,
+  updateUserRole,
   approveInstructor,
   getAdminCourses,
   updateCourseStatus,
@@ -17,6 +18,7 @@ router.post('/login', adminLogin);
 // Protected Admin Routes (Strictly Enforced by requireAdmin Middleware)
 router.get('/dashboard-stats', requireAdmin, getDashboardStats);
 router.get('/users', requireAdmin, getAdminUsers);
+router.patch('/users/:id/role', requireAdmin, updateUserRole);
 router.patch('/users/:id/approve-instructor', requireAdmin, approveInstructor);
 router.get('/courses', requireAdmin, getAdminCourses);
 router.patch('/courses/:id/status', requireAdmin, updateCourseStatus);

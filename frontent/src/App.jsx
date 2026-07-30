@@ -37,6 +37,7 @@ import StudentQuestions from './instructor/StudentQuestions';
 import InstructorAnalytics from './instructor/InstructorAnalytics';
 
 import AdminDashboard from './admin/AdminDashboard';
+import ManageUsers from './pages/admin/ManageUsers';
 
 function App() {
   const { loading } = useAuth();
@@ -147,10 +148,10 @@ function App() {
         }
       >
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="approvals" element={<AdminDashboard />} />
+        <Route path="approvals" element={<ManageUsers />} />
         <Route path="courses" element={<AdminDashboard />} />
         <Route path="categories" element={<AdminDashboard />} />
-        <Route path="users" element={<AdminDashboard />} />
+        <Route path="users" element={<ManageUsers />} />
         <Route path="reports" element={<AdminDashboard />} />
       </Route>
 
