@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import Footer from '../components/Footer';
 import {
   FiBookOpen,
   FiSearch,
@@ -422,53 +423,7 @@ const Home = () => {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-slate-950 border-t border-slate-800/80 pt-12 pb-8 text-slate-400 text-xs">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-base font-bold text-white">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
-                <FiBookOpen />
-              </div>
-              EduVerse LMS
-            </div>
-            <p className="text-slate-400 leading-relaxed">
-              Empowering learners worldwide with cutting-edge course curriculum and accredited PDF certificates.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-bold text-white mb-3">Quick Links</h4>
-            <ul className="space-y-2">
-              <li><Link to="/courses" className="hover:text-white transition">Browse Courses</Link></li>
-              <li><Link to="/login" className="hover:text-white transition">Sign In</Link></li>
-              <li><Link to="/register" className="hover:text-white transition">Register Account</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-bold text-white mb-3">Top Categories</h4>
-            <ul className="space-y-2">
-              <li><a href="#" className="hover:text-white transition">Web Development</a></li>
-              <li><a href="#" className="hover:text-white transition">Data Science & AI</a></li>
-              <li><a href="#" className="hover:text-white transition">UI/UX Design</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-bold text-white mb-3">Connect With Us</h4>
-            <div className="flex items-center gap-3 text-lg">
-              <a href="#" className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition"><FiGithub /></a>
-              <a href="#" className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition"><FiTwitter /></a>
-              <a href="#" className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition"><FiLinkedin /></a>
-              <a href="#" className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition"><FiInstagram /></a>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 border-t border-slate-900 text-center text-slate-500">
-          © {new Date().getFullYear()} EduVerse LMS Platform. All rights reserved.
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
