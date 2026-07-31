@@ -475,7 +475,7 @@ const approveInstructor = async (req, res, next) => {
   }
 };
 
-// @desc    Delete user completely from database
+// @desc    Delete user completely from database (Approved or Pending Students & Instructors)
 // @route   DELETE /api/admin/users/:id
 // @access  Private (Admin Only)
 const deleteUser = async (req, res, next) => {
@@ -487,11 +487,24 @@ const deleteUser = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+    // Safety check: Prevent Admin from deleting their own account
+    if (req.user && req.user._id && req.user._id.toString() === id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin cannot delete their own account.',
+      });
+    }
+
+    // Delete associated notifications
+    await Notification.deleteMany({ userId: id });
+
+    // Permanently remove user from MongoDB User collection
     await user.deleteOne();
 
     res.status(200).json({
       success: true,
-      message: `User ${user.name} removed successfully`,
+      message: 'User account deleted successfully.',
+      data: { id, name: user.name, email: user.email },
     });
   } catch (error) {
     if (typeof next === 'function') next(error);

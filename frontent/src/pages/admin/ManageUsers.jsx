@@ -11,8 +11,8 @@ import {
   FiEye,
   FiX,
   FiTrash2,
-  FiShield,
   FiUserCheck,
+  FiAlertTriangle,
 } from 'react-icons/fi';
 
 const ManageUsers = () => {
@@ -22,7 +22,8 @@ const ManageUsers = () => {
   const [selectedRole, setSelectedRole] = useState('All');
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'pending'
   const [selectedUserModal, setSelectedUserModal] = useState(null);
-  const [editUserModal, setEditUserModal] = useState(null);
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -32,7 +33,7 @@ const ManageUsers = () => {
       if (searchQuery) params.search = searchQuery;
 
       const response = await api.get('/admin/users', { params });
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         setUsers(response.data.data);
       }
     } catch (err) {
@@ -51,11 +52,11 @@ const ManageUsers = () => {
   const handleApproveUser = async (userId) => {
     try {
       const response = await api.patch(`/admin/users/${userId}/approve`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast.success('User account approved and activated! 🎉');
         fetchUsers();
-        if (editUserModal && editUserModal._id === userId) {
-          setEditUserModal((prev) => ({ ...prev, status: 'Active', isApproved: true }));
+        if (selectedUserModal && selectedUserModal._id === userId) {
+          setSelectedUserModal((prev) => ({ ...prev, status: 'Active', isApproved: true }));
         }
       }
     } catch (err) {
@@ -67,11 +68,11 @@ const ManageUsers = () => {
   const handleRejectUser = async (userId) => {
     try {
       const response = await api.patch(`/admin/users/${userId}/reject`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast.success('User registration request rejected.');
         fetchUsers();
-        if (editUserModal && editUserModal._id === userId) {
-          setEditUserModal((prev) => ({ ...prev, status: 'Rejected', isApproved: false }));
+        if (selectedUserModal && selectedUserModal._id === userId) {
+          setSelectedUserModal((prev) => ({ ...prev, status: 'Rejected', isApproved: false }));
         }
       }
     } catch (err) {
@@ -79,22 +80,26 @@ const ManageUsers = () => {
     }
   };
 
-  // Handle Delete User
-  const handleDeleteUser = async (user) => {
-    if (!user) return;
-    if (!window.confirm(`Are you sure you want to permanently delete user "${user.name}"?`)) {
-      return;
-    }
+  // Handle Confirm Delete User
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmUser) return;
 
     try {
-      const response = await api.delete(`/admin/users/${user._id}`);
-      if (response.data.success) {
-        toast.success(`User "${user.name}" deleted successfully`);
-        setEditUserModal(null);
+      setDeleting(true);
+      const response = await api.delete(`/admin/users/${deleteConfirmUser._id}`);
+      if (response.data && response.data.success) {
+        toast.success('User account deleted successfully.');
+        setDeleteConfirmUser(null);
+        if (selectedUserModal && selectedUserModal._id === deleteConfirmUser._id) {
+          setSelectedUserModal(null);
+        }
         fetchUsers();
       }
     } catch (err) {
-      toast.error('Failed to delete user');
+      console.error('Error deleting user account:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete user account.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -112,19 +117,19 @@ const ManageUsers = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-8"
+      className="space-y-8 font-sans"
     >
       {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="inline-block px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
-            Governance & User Approval System
+            Governance & Account Control
           </span>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
             <FiUsers className="text-blue-500" /> Platform User Directory
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Review student and instructor registrations, approve access, or reject applications.
+            Review, approve, or permanently remove approved student and instructor accounts.
           </p>
         </div>
 
@@ -212,6 +217,7 @@ const ManageUsers = () => {
                 {displayedUsers.map((user) => {
                   const isPending = user.status === 'Pending' || (!user.isApproved && user.role !== 'Admin');
                   const isRejected = user.status === 'Rejected';
+                  const isAdmin = user.role === 'Admin';
 
                   return (
                     <tr key={user._id} className="hover:bg-slate-800/40 transition">
@@ -273,7 +279,7 @@ const ManageUsers = () => {
                         )}
                       </td>
 
-                      {/* Actions: Approve / Reject / View Details */}
+                      {/* Actions: Approve / Reject / View Details / Delete */}
                       <td className="py-4 px-4 text-right space-x-2">
                         {isPending && (
                           <>
@@ -298,6 +304,17 @@ const ManageUsers = () => {
                         >
                           <FiEye /> View Details
                         </button>
+
+                        {/* Explicit Danger Red Delete Button for Approved/Pending non-Admin users */}
+                        {!isAdmin && (
+                          <button
+                            onClick={() => setDeleteConfirmUser(user)}
+                            className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold rounded-xl transition inline-flex items-center gap-1 shadow-sm"
+                            title="Remove User Account"
+                          >
+                            <FiTrash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -369,34 +386,100 @@ const ManageUsers = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
-                {selectedUserModal.status === 'Pending' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        handleApproveUser(selectedUserModal._id);
-                        setSelectedUserModal(null);
-                      }}
-                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition"
-                    >
-                      Approve User
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleRejectUser(selectedUserModal._id);
-                        setSelectedUserModal(null);
-                      }}
-                      className="px-4 py-2.5 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-md transition"
-                    >
-                      Reject User
-                    </button>
-                  </>
+              <div className="flex items-center justify-between pt-2">
+                {selectedUserModal.role !== 'Admin' && (
+                  <button
+                    onClick={() => {
+                      setDeleteConfirmUser(selectedUserModal);
+                      setSelectedUserModal(null);
+                    }}
+                    className="px-4 py-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold rounded-xl border border-rose-500/30 transition flex items-center gap-1.5"
+                  >
+                    <FiTrash2 className="w-4 h-4" /> Delete Account
+                  </button>
                 )}
+
+                <div className="flex justify-end gap-2 ml-auto">
+                  {selectedUserModal.status === 'Pending' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          handleApproveUser(selectedUserModal._id);
+                          setSelectedUserModal(null);
+                        }}
+                        className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition"
+                      >
+                        Approve User
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleRejectUser(selectedUserModal._id);
+                          setSelectedUserModal(null);
+                        }}
+                        className="px-4 py-2.5 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-md transition"
+                      >
+                        Reject User
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setSelectedUserModal(null)}
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
+                  >
+                    Close Profile
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CONFIRM DELETE USER MODAL */}
+      <AnimatePresence>
+        {deleteConfirmUser && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900 border border-rose-500/30 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6"
+            >
+              <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-xl font-bold border border-rose-500/20 shrink-0">
+                  <FiAlertTriangle />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">Delete User Account</h3>
+                  <p className="text-xs text-rose-400 font-semibold">Permanent System Action</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2 text-xs">
+                <p className="text-slate-300 leading-relaxed">
+                  Are you sure you want to permanently delete this user account?
+                </p>
+                <div className="pt-2 border-t border-slate-800/80 space-y-1">
+                  <p className="text-white font-bold">{deleteConfirmUser.name}</p>
+                  <p className="text-slate-400 text-[11px]">{deleteConfirmUser.email}</p>
+                  <p className="text-indigo-400 text-[11px] font-bold">Role: {deleteConfirmUser.role}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
                 <button
-                  onClick={() => setSelectedUserModal(null)}
-                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
+                  onClick={() => setDeleteConfirmUser(null)}
+                  disabled={deleting}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
                 >
-                  Close Profile
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30 transition flex items-center gap-2"
+                >
+                  {deleting ? 'Deleting...' : 'Delete User'}
                 </button>
               </div>
             </motion.div>
