@@ -15,11 +15,12 @@ import {
   FiX,
   FiChevronDown,
   FiChevronUp,
+  FiUploadCloud,
+  FiCheckCircle,
 } from 'react-icons/fi';
 
 const ManageLessons = () => {
   const { courseId } = useParams();
-  const navigate = useNavigate();
 
   const [course, setCourse] = useState(null);
   const [sections, setSections] = useState([]);
@@ -34,6 +35,7 @@ const ManageLessons = () => {
   const [lessonModalOpen, setLessonModalOpen] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState('');
   const [editingLesson, setEditingLesson] = useState(null);
+  const [pdfFileName, setPdfFileName] = useState('');
   const [lessonForm, setLessonForm] = useState({
     title: '',
     type: 'video',
@@ -50,7 +52,7 @@ const ManageLessons = () => {
     try {
       setLoading(true);
       const response = await api.get(`/courses/${courseId}`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         const courseData = response.data.data;
         setCourse(courseData);
         setSections(courseData.sections || []);
@@ -97,7 +99,7 @@ const ManageLessons = () => {
         const response = await api.put(`/courses/sections/${editingSection._id}`, {
           title: sectionTitle,
         });
-        if (response.data.success) {
+        if (response.data && response.data.success) {
           toast.success('Section title updated!');
           fetchCourseCurriculum();
         }
@@ -106,7 +108,7 @@ const ManageLessons = () => {
           title: sectionTitle,
           order: sections.length + 1,
         });
-        if (response.data.success) {
+        if (response.data && response.data.success) {
           toast.success('New section added to curriculum! 🎉');
           fetchCourseCurriculum();
         }
@@ -123,7 +125,7 @@ const ManageLessons = () => {
     }
     try {
       const response = await api.delete(`/courses/sections/${sectionId}`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast.success('Section deleted');
         fetchCourseCurriculum();
       }
@@ -136,6 +138,7 @@ const ManageLessons = () => {
   const handleOpenAddLesson = (sectionId) => {
     setSelectedSectionId(sectionId);
     setEditingLesson(null);
+    setPdfFileName('');
     setLessonForm({
       title: '',
       type: 'video',
@@ -150,6 +153,7 @@ const ManageLessons = () => {
   const handleOpenEditLesson = (lesson) => {
     setSelectedSectionId(lesson.sectionId);
     setEditingLesson(lesson);
+    setPdfFileName(lesson.pdfUrl ? (lesson.pdfUrl.startsWith('data:') ? 'Uploaded_Document.pdf' : '') : '');
     setLessonForm({
       title: lesson.title || '',
       type: lesson.type || 'video',
@@ -161,6 +165,29 @@ const ManageLessons = () => {
     setLessonModalOpen(true);
   };
 
+  const handlePdfFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+      toast.error('Please upload a valid PDF document (.pdf)');
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('PDF file size must be under 15MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPdfFileName(file.name);
+      setLessonForm((prev) => ({ ...prev, pdfUrl: reader.result }));
+      toast.success(`PDF "${file.name}" attached successfully! 📄`);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveLesson = async () => {
     if (!lessonForm.title.trim()) {
       toast.error('Please enter a lesson title');
@@ -170,7 +197,7 @@ const ManageLessons = () => {
     try {
       if (editingLesson) {
         const response = await api.put(`/courses/lessons/${editingLesson._id}`, lessonForm);
-        if (response.data.success) {
+        if (response.data && response.data.success) {
           toast.success('Lesson updated successfully!');
           fetchCourseCurriculum();
         }
@@ -179,7 +206,7 @@ const ManageLessons = () => {
           `/courses/sections/${selectedSectionId}/lessons`,
           lessonForm
         );
-        if (response.data.success) {
+        if (response.data && response.data.success) {
           toast.success('Lesson added to section! 🚀');
           fetchCourseCurriculum();
         }
@@ -194,7 +221,7 @@ const ManageLessons = () => {
     if (!window.confirm('Are you sure you want to delete this lesson?')) return;
     try {
       const response = await api.delete(`/courses/lessons/${lessonId}`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast.success('Lesson removed');
         fetchCourseCurriculum();
       }
@@ -212,7 +239,7 @@ const ManageLessons = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-400 text-sm font-medium">Loading Course Curriculum...</p>
@@ -226,7 +253,7 @@ const ManageLessons = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="max-w-5xl mx-auto space-y-8"
+      className="max-w-5xl mx-auto space-y-8 font-sans"
     >
       {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -350,8 +377,8 @@ const ManageLessons = () => {
                               <span className="uppercase text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">
                                 {lesson.type}
                               </span>
-                              {lesson.videoUrl && <span>Video URL Configured</span>}
-                              {lesson.pdfUrl && <span>PDF Configured</span>}
+                              {lesson.videoUrl && <span>Video Stream Configured</span>}
+                              {lesson.pdfUrl && <span className="text-emerald-400 font-medium">✓ PDF Document Attached</span>}
                             </div>
                           </div>
                         </div>
@@ -524,17 +551,66 @@ const ManageLessons = () => {
                 )}
 
                 {lessonForm.type === 'pdf' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      PDF Document Attachment URL
+                  <div className="space-y-3">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      PDF Document Attachment (File Upload or External URL)
                     </label>
-                    <input
-                      type="url"
-                      placeholder="https://example.com/materials.pdf"
-                      value={lessonForm.pdfUrl}
-                      onChange={(e) => setLessonForm({ ...lessonForm, pdfUrl: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-                    />
+
+                    {/* Dual Choice: Direct File Upload or URL Fallback */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Direct PDF File Upload Input */}
+                      <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
+                        <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                          <FiUploadCloud className="text-indigo-400" /> Direct PDF File Upload
+                        </span>
+                        <label className="cursor-pointer px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg text-xs font-bold text-center transition flex items-center justify-center gap-1.5">
+                          <FiUploadCloud className="w-4 h-4" /> Browse PDF File
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={handlePdfFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {/* URL Fallback Input */}
+                      <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
+                        <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                          <FiFileText className="text-blue-400" /> External PDF URL Fallback
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="https://example.com/materials.pdf"
+                          value={pdfFileName ? '' : lessonForm.pdfUrl}
+                          onChange={(e) => {
+                            setPdfFileName('');
+                            setLessonForm({ ...lessonForm, pdfUrl: e.target.value });
+                          }}
+                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Selected PDF Badge Display */}
+                    {pdfFileName && (
+                      <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-400">
+                        <span className="flex items-center gap-1.5 font-bold truncate">
+                          <FiCheckCircle className="shrink-0" /> ✓ {pdfFileName}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfFileName('');
+                            setLessonForm({ ...lessonForm, pdfUrl: '' });
+                          }}
+                          className="p-1 hover:text-red-400 text-emerald-400 transition"
+                          title="Remove PDF"
+                        >
+                          <FiX className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
