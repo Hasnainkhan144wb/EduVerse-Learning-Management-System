@@ -533,7 +533,7 @@ const getAdminCourses = async (req, res, next) => {
   }
 };
 
-// @desc    Update course status (Published / Draft / Rejected)
+// @desc    Update course status (Published / Unpublished / Draft / Rejected)
 // @route   PATCH /api/admin/courses/:id/status
 // @access  Private (Admin Only)
 const updateCourseStatus = async (req, res, next) => {
@@ -542,25 +542,34 @@ const updateCourseStatus = async (req, res, next) => {
     const { status } = req.body;
 
     if (!status) {
-      return res.status(400).json({ success: false, message: 'Please provide status' });
+      return res.status(400).json({ success: false, message: 'Status value is required.' });
     }
 
-    const course = await Course.findById(id);
-    if (!course) {
-      return res.status(404).json({ success: false, message: 'Course not found' });
+    const isPublished = status === 'Published';
+
+    const updatedCourse = await Course.findByIdAndUpdate(
+      id,
+      {
+        status: status,
+        isPublished: isPublished,
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedCourse) {
+      return res.status(404).json({ success: false, message: 'Course not found.' });
     }
 
-    course.status = status;
-    await course.save();
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: `Course status updated to ${status}`,
-      data: course,
+      message: `Course status successfully updated to ${status}`,
+      data: updatedCourse,
+      course: updatedCourse,
     });
   } catch (error) {
+    console.error('🔥 Error updating course status:', error);
     if (typeof next === 'function') next(error);
-    else res.status(500).json({ success: false, message: error.message });
+    else return res.status(500).json({ success: false, message: error.message || 'Failed to update course status' });
   }
 };
 

@@ -11,9 +11,6 @@ import {
   FiTrash2,
   FiEye,
   FiX,
-  FiDollarSign,
-  FiUser,
-  FiLayers,
 } from 'react-icons/fi';
 
 const ManageCourses = () => {
@@ -27,12 +24,11 @@ const ManageCourses = () => {
     try {
       setLoading(true);
       const response = await api.get('/api/admin/courses').catch(() => null);
-      if (response && response.data.success) {
+      if (response && response.data && response.data.success) {
         setCourses(response.data.data);
       } else {
-        // Direct alias fallback
         const fallbackRes = await api.get('/admin/courses');
-        if (fallbackRes.data.success) {
+        if (fallbackRes.data && fallbackRes.data.success) {
           setCourses(fallbackRes.data.data);
         }
       }
@@ -48,18 +44,45 @@ const ManageCourses = () => {
     fetchAdminCourses();
   }, [fetchAdminCourses]);
 
-  const handleUpdateStatus = async (courseId, newStatus) => {
+  const handleTogglePublish = async (courseId, currentStatus) => {
     try {
+      const targetStatus = currentStatus === 'Published' ? 'Unpublished' : 'Published';
+
       const response = await api.patch(`/admin/courses/${courseId}/status`, {
-        status: newStatus,
+        status: targetStatus,
       });
 
-      if (response.data.success) {
-        toast.success(`Course status updated to ${newStatus}! 🎓`);
-        fetchAdminCourses();
+      if (response.data && response.data.success) {
+        toast.success(`Course successfully ${targetStatus.toLowerCase()}! 🎓`);
+        setCourses((prevCourses) =>
+          prevCourses.map((c) =>
+            c._id === courseId
+              ? { ...c, status: targetStatus, isPublished: targetStatus === 'Published' }
+              : c
+          )
+        );
       }
-    } catch (err) {
-      toast.error('Failed to update course status');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update course status');
+    }
+  };
+
+  const handleRejectCourse = async (courseId) => {
+    try {
+      const response = await api.patch(`/admin/courses/${courseId}/status`, {
+        status: 'Rejected',
+      });
+
+      if (response.data && response.data.success) {
+        toast.success('Course status updated to Rejected.');
+        setCourses((prevCourses) =>
+          prevCourses.map((c) =>
+            c._id === courseId ? { ...c, status: 'Rejected', isPublished: false } : c
+          )
+        );
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to reject course');
     }
   };
 
@@ -69,7 +92,7 @@ const ManageCourses = () => {
     }
     try {
       const response = await api.delete(`/courses/${courseId}`);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         toast.success('Course deleted successfully');
         fetchAdminCourses();
       }
@@ -92,7 +115,7 @@ const ManageCourses = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-8"
+      className="space-y-8 font-sans"
     >
       {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -104,7 +127,7 @@ const ManageCourses = () => {
             <FiBookOpen className="text-blue-500" /> Platform Course Governance
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Review instructor submissions, approve courses for catalog listing, or reject low quality content.
+            Review instructor submissions, publish courses to public catalog, or unpublish/reject content.
           </p>
         </div>
       </div>
@@ -131,7 +154,7 @@ const ManageCourses = () => {
           >
             <option value="All">All Statuses</option>
             <option value="Published">Published</option>
-            <option value="Draft">Draft / Pending</option>
+            <option value="Unpublished">Unpublished / Draft</option>
             <option value="Rejected">Rejected</option>
           </select>
         </div>
@@ -220,7 +243,7 @@ const ManageCourses = () => {
                         </span>
                       </td>
 
-                      {/* Actions */}
+                      {/* Moderation Actions */}
                       <td className="py-4 px-4 text-right space-x-2">
                         <button
                           onClick={() => setPreviewCourse(course)}
@@ -230,21 +253,29 @@ const ManageCourses = () => {
                           <FiEye className="w-4 h-4" />
                         </button>
 
-                        {!isPublished && (
+                        {/* Toggle Publish / Unpublish Button */}
+                        {isPublished ? (
                           <button
-                            onClick={() => handleUpdateStatus(course._id, 'Published')}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1"
+                            onClick={() => handleTogglePublish(course._id, course.status)}
+                            className="px-3.5 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white text-xs font-bold rounded-xl border border-red-500/30 transition inline-flex items-center gap-1 shadow-sm"
                           >
-                            <FiCheckCircle /> Approve
+                            <FiXCircle /> Unpublish
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleTogglePublish(course._id, course.status)}
+                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md transition inline-flex items-center gap-1"
+                          >
+                            <FiCheckCircle /> Publish
                           </button>
                         )}
 
-                        {isPublished && (
+                        {!isPublished && !isRejected && (
                           <button
-                            onClick={() => handleUpdateStatus(course._id, 'Rejected')}
-                            className="px-3 py-1.5 bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white text-xs font-bold rounded-xl border border-red-500/30 transition inline-flex items-center gap-1"
+                            onClick={() => handleRejectCourse(course._id)}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-red-600/80 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition inline-flex items-center gap-1"
                           >
-                            <FiXCircle /> Unpublish
+                            <FiXCircle /> Reject
                           </button>
                         )}
 
@@ -331,15 +362,25 @@ const ManageCourses = () => {
                 >
                   Close Inspection
                 </button>
-                {previewCourse.status !== 'Published' && (
+                {previewCourse.status !== 'Published' ? (
                   <button
                     onClick={() => {
-                      handleUpdateStatus(previewCourse._id, 'Published');
+                      handleTogglePublish(previewCourse._id, previewCourse.status);
                       setPreviewCourse(null);
                     }}
                     className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition"
                   >
-                    <FiCheckCircle /> Approve & Publish Course
+                    <FiCheckCircle /> Publish Course
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      handleTogglePublish(previewCourse._id, previewCourse.status);
+                      setPreviewCourse(null);
+                    }}
+                    className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30 flex items-center gap-1.5 transition"
+                  >
+                    <FiXCircle /> Unpublish Course
                   </button>
                 )}
               </div>

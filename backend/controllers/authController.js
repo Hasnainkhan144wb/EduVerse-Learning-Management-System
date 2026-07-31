@@ -208,10 +208,57 @@ const getMe = async (req, res) => {
   }
 };
 
+// @desc    Update user profile (Full Name & Avatar)
+// @route   PUT /api/users/profile OR PUT /api/auth/profile
+// @access  Private
+const updateUserProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found',
+      });
+    }
+
+    if (req.body.name) {
+      user.name = req.body.name.trim();
+    }
+
+    if (req.body.avatar !== undefined) {
+      user.avatar = req.body.avatar;
+    }
+
+    const updatedUser = await user.save();
+
+    const userPayload = {
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      status: updatedUser.status || 'Active',
+      avatar: updatedUser.avatar,
+      isApproved: updatedUser.isApproved,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully!',
+      user: userPayload,
+      data: userPayload,
+    });
+  } catch (error) {
+    console.error('🔥 BACKEND UPDATE PROFILE ERROR:', error);
+    if (typeof next === 'function') next(error);
+    else return res.status(500).json({ success: false, message: error.message || 'Server error updating profile' });
+  }
+};
+
 // @desc    Toggle course in user's wishlist
 // @route   POST /api/auth/wishlist OR POST /api/users/wishlist
 // @access  Private
-const toggleWishlist = async (req, res) => {
+const toggleWishlist = async (req, res, next) => {
   try {
     const { courseId } = req.body;
     const userId = req.user._id;
@@ -243,7 +290,8 @@ const toggleWishlist = async (req, res) => {
       data: user.wishlist,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -345,6 +393,7 @@ module.exports = {
   registerUser,
   loginUser,
   getMe,
+  updateUserProfile,
   toggleWishlist,
   forgotPassword,
   resetPassword,

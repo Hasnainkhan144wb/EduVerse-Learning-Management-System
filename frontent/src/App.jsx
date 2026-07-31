@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import BrowseCourses from './pages/BrowseCourses';
 import CourseDetails from './pages/CourseDetails';
+import ProfilePage from './pages/ProfilePage';
 import AdminLogin from './pages/admin/AdminLogin';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -68,6 +69,16 @@ function App() {
       <Route path="/courses" element={<BrowseCourses />} />
       <Route path="/courses/:id" element={<CourseDetails />} />
 
+      {/* Standalone Protected Profile */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Dedicated Isolated Admin Login Portal */}
       <Route path="/admin" element={<AdminLogin />} />
 
@@ -116,6 +127,7 @@ function App() {
         <Route path="assignments" element={<StudentAssignments />} />
         <Route path="wishlist" element={<Wishlist />} />
         <Route path="certificates" element={<StudentCertificates />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* Protected Instructor Layout & Studio */}
@@ -142,6 +154,7 @@ function App() {
         <Route path="courses/builder" element={<CourseBuilder />} />
         <Route path="courses/edit/:courseId" element={<CourseBuilder />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* Protected Admin Layout & Command Center (Strict Admin Guard) */}

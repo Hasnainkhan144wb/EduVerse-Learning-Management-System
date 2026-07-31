@@ -14,6 +14,7 @@ import {
   FiUserCheck,
   FiFileText,
   FiMessageSquare,
+  FiUser,
 } from 'react-icons/fi';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -25,6 +26,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'My Assignments', path: '/student/assignments', icon: FiFileText },
     { label: 'Wishlist', path: '/student/wishlist', icon: FiHeart },
     { label: 'Certificates', path: '/student/certificates', icon: FiAward },
+    { label: 'My Profile', path: '/student/profile', icon: FiUser },
   ];
 
   const instructorLinks = [
@@ -35,10 +37,11 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'Assignments', path: '/instructor/assignments/manage', icon: FiFileText },
     { label: 'Student Q&A', path: '/instructor/questions', icon: FiMessageSquare },
     { label: 'Analytics', path: '/instructor/analytics', icon: FiBarChart2 },
+    { label: 'My Profile', path: '/instructor/profile', icon: FiUser },
   ];
 
   const adminLinks = [
-    { label: 'Platform Stats', path: '/admin', icon: FiGrid },
+    { label: 'Platform Stats', path: '/admin/dashboard', icon: FiGrid },
     { label: 'Instructor Approvals', path: '/admin/approvals', icon: FiUserCheck },
     { label: 'Course Management', path: '/admin/courses', icon: FiCheckSquare },
     { label: 'Categories', path: '/admin/categories', icon: FiFolder },

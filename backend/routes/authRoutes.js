@@ -4,6 +4,7 @@ const {
   registerUser,
   loginUser,
   getMe,
+  updateUserProfile,
   toggleWishlist,
   forgotPassword,
   resetPassword,
@@ -14,6 +15,7 @@ const { protect } = require('../middleware/authMiddleware');
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/me', protect, getMe);
+router.put('/profile', protect, updateUserProfile);
 router.post('/wishlist', protect, toggleWishlist);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:resetToken', resetPassword);

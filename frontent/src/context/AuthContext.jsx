@@ -125,10 +125,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Profile update handler
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await api.put('/users/profile', profileData);
+      if (response.data && response.data.success) {
+        const updated = response.data.user || response.data.data;
+        updateUserState(updated);
+        return { success: true, message: response.data.message || 'Profile updated successfully!', user: updated };
+      }
+      return { success: false, message: response.data?.message || 'Failed to update profile' };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to update profile';
+      return { success: false, message };
+    }
+  };
+
   // Profile / Admin state update helper
   const updateUserState = (updatedUser) => {
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser((prev) => ({ ...prev, ...updatedUser }));
+    localStorage.setItem('user', JSON.stringify({ ...user, ...updatedUser }));
   };
 
   const setTokenState = (newToken) => {
@@ -148,6 +164,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         checkAuthStatus,
+        updateProfile,
         updateUserState,
         setTokenState,
       }}

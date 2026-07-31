@@ -11,6 +11,7 @@ dotenv.config();
 
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const courseRoutes = require('./routes/courseRoutes');
@@ -23,6 +24,7 @@ const instructorRoutes = require('./routes/instructorRoutes');
 
 const { protect } = require('./middleware/authMiddleware');
 const { toggleWishlist } = require('./controllers/authController');
+const { updateUserProfile } = require('./controllers/userController');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 // Connect to MongoDB
@@ -56,6 +58,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/instructor', instructorRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -68,6 +71,7 @@ app.use('/api/questions', discussionRoutes);
 
 // Direct Aliases
 app.post('/api/users/wishlist', protect, toggleWishlist);
+app.put('/api/users/profile', protect, updateUserProfile);
 
 // Health check endpoint
 app.use('/api/health', (req, res) => {
