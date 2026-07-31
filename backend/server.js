@@ -43,9 +43,9 @@ app.use(
   })
 );
 
-// Body parser & cookie parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 🛠️ FIX PAYLOAD SIZE LIMITS (Support large base64 avatar images & documents up to 50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
 // Dev logging middleware
