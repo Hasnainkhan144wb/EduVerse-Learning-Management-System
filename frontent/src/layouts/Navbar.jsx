@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   FiBookOpen,
@@ -13,12 +13,10 @@ import {
 
 const Navbar = ({ onToggleSidebar }) => {
   const { user, logout, role } = useAuth();
-  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
   };
 
   const getRoleBadgeColor = () => {
@@ -33,7 +31,7 @@ const Navbar = ({ onToggleSidebar }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-slate-100">
+    <header className="sticky top-0 z-40 w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-slate-100 font-sans">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
         {/* Left Side: Mobile Menu Toggle & Logo */}
         <div className="flex items-center gap-3">

@@ -31,7 +31,6 @@ const AdminLayout = () => {
 
   const handleAdminLogout = () => {
     logout();
-    navigate('/admin', { replace: true });
   };
 
   // Fetch pending user approvals for real-time notification bell & dropdown

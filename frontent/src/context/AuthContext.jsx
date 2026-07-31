@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 
 const AuthContext = createContext();
@@ -19,7 +20,7 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!token && !!user;
   const role = user?.role || null;
 
-  // Logout handler
+  // Global Logout handler - Clears all credentials and redirects directly to main landing page '/'
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -28,6 +29,10 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setLoading(false);
+    toast.success('Logged out successfully!');
+    if (window.location.pathname !== '/') {
+      window.location.href = '/';
+    }
   }, []);
 
   // Auto-login / verify token on mount
@@ -42,7 +47,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await api.get('/auth/me').catch(() => null);
-      if (response && response.data.success) {
+      if (response && response.data && response.data.success) {
         setUser(response.data.data);
         setToken(storedToken);
         localStorage.setItem('user', JSON.stringify(response.data.data));
@@ -82,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { email, password });
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         const { token: newToken, ...userData } = response.data.data;
 
         localStorage.setItem('token', newToken);
@@ -106,7 +111,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await api.post('/auth/register', userData);
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         const { token: newToken, ...newUser } = response.data.data;
 
         localStorage.setItem('token', newToken);
