@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import SearchBar from '../components/SearchBar';
 import {
   FiBookOpen,
   FiLogOut,
@@ -8,15 +9,21 @@ import {
   FiBell,
   FiMenu,
   FiChevronDown,
-  FiSearch,
 } from 'react-icons/fi';
 
 const Navbar = ({ onToggleSidebar }) => {
   const { user, logout, role } = useAuth();
+  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleNavbarSearch = (query) => {
+    if (query && query.trim()) {
+      navigate(`/courses?search=${encodeURIComponent(query.trim())}`);
+    }
   };
 
   const getRoleBadgeColor = () => {
@@ -53,16 +60,9 @@ const Navbar = ({ onToggleSidebar }) => {
           </Link>
         </div>
 
-        {/* Center: Search Bar */}
+        {/* Center: Polished Search Bar Component */}
         <div className="hidden md:flex items-center max-w-md w-full mx-4">
-          <div className="relative w-full">
-            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search courses, skills, topics..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-            />
-          </div>
+          <SearchBar onSearch={handleNavbarSearch} placeholder="Search courses, skills, topics..." />
         </div>
 
         {/* Right Side: Notification & User Menu */}
