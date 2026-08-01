@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import Footer from '../components/Footer';
+import SearchBar from '../components/SearchBar';
 import {
   FiBookOpen,
-  FiSearch,
   FiCode,
   FiBarChart2,
   FiLayout,
@@ -22,106 +22,62 @@ import {
   FiCheckCircle,
   FiUser,
   FiLogOut,
-  FiGithub,
-  FiTwitter,
-  FiLinkedin,
-  FiInstagram,
 } from 'react-icons/fi';
 
 const Home = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [courses, setCourses] = useState([]);
+  const [popularCourses, setPopularCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
-  const [searchKeyword, setSearchKeyword] = useState('');
 
+  // Fetch published courses for landing showcase
   useEffect(() => {
-    const fetchTrendingCourses = async () => {
+    const fetchLandingData = async () => {
       try {
-        const response = await api.get('/courses?status=Published&limit=6').catch(() => null);
-        if (response && response.data.success) {
-          setCourses(response.data.data);
-        } else {
-          // Fallback mock courses if DB has no published courses yet
-          setCourses([
-            {
-              _id: 'c1',
-              title: 'Full-Stack MERN Mastery: Node.js, Express & React',
-              description: 'Build enterprise-grade web applications from scratch with modern MERN stack.',
-              thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
-              instructorRef: { name: 'Dr. Sarah Jenkins' },
-              level: 'Beginner',
-              price: 49.99,
-              rating: 4.9,
-            },
-            {
-              _id: 'c2',
-              title: 'Python for Data Science & Machine Learning Bootcamp',
-              description: 'Learn NumPy, Pandas, Scikit-Learn, and Neural Networks with hands-on projects.',
-              thumbnail: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80',
-              instructorRef: { name: 'Alex Rivera' },
-              level: 'Intermediate',
-              price: 59.99,
-              rating: 4.8,
-            },
-            {
-              _id: 'c3',
-              title: 'UI/UX Design Masterclass: Figma & Design Systems',
-              description: 'Master modern interface design, wireframing, prototyping, and design tokens.',
-              thumbnail: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=600&auto=format&fit=crop&q=80',
-              instructorRef: { name: 'Elena Rostova' },
-              level: 'All Levels',
-              price: 39.99,
-              rating: 4.9,
-            },
-          ]);
+        setLoadingCourses(true);
+        const res = await api.get('/courses?status=Published');
+        if (res.data && res.data.success) {
+          setPopularCourses((res.data.data || []).slice(0, 6));
         }
       } catch (err) {
-        console.error('Error loading trending courses:', err);
+        console.error('Error loading landing page courses:', err);
       } finally {
         setLoadingCourses(false);
       }
     };
-
-    fetchTrendingCourses();
+    fetchLandingData();
   }, []);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchKeyword.trim()) {
-      navigate(`/courses?keyword=${encodeURIComponent(searchKeyword)}`);
-    }
-  };
-
   const categories = [
-    { title: 'Web Development', icon: FiCode, count: '320+ Courses', color: 'from-blue-600 to-indigo-600' },
-    { title: 'Data Science & AI', icon: FiCpu, count: '180+ Courses', color: 'from-purple-600 to-pink-600' },
-    { title: 'UI/UX Design', icon: FiLayout, count: '150+ Courses', color: 'from-amber-500 to-orange-600' },
-    { title: 'Business & Analytics', icon: FiBriefcase, count: '210+ Courses', color: 'from-emerald-500 to-teal-600' },
+    { title: 'Web Development', count: '14+ Courses', icon: FiCode, color: 'from-blue-600 to-indigo-600' },
+    { title: 'Data Science & AI', count: '10+ Courses', icon: FiCpu, color: 'from-purple-600 to-pink-600' },
+    { title: 'UI/UX & Product Design', count: '8+ Courses', icon: FiLayout, color: 'from-amber-500 to-orange-600' },
+    { title: 'Business & Analytics', count: '12+ Courses', icon: FiBarChart2, color: 'from-emerald-600 to-teal-600' },
+    { title: 'Cloud & DevOps', count: '6+ Courses', icon: FiBriefcase, color: 'from-cyan-600 to-blue-600' },
   ];
 
   const features = [
     {
-      title: 'HD Video Lectures',
-      description: 'Stream crystal-clear video lessons with playback speed control and captions.',
+      title: 'HD Video Streaming',
+      description: 'Crystal-clear video lessons with playback speed control and lesson progress tracking.',
       icon: FiVideo,
       color: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
     },
     {
-      title: 'PDF & Code Resources',
-      description: 'Download lesson cheat-sheets, source code repositories, and slide decks.',
+      title: 'Resource Downloads & Code',
+      description: 'Direct PDF attachments, source code files, and curated reading materials.',
       icon: FiFileText,
       color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     },
     {
-      title: 'Automated Quizzes',
-      description: 'Test your retention with instant MCQ grading, feedback, and score reports.',
+      title: 'Quizzes & Assignments',
+      description: 'Test your knowledge with instant auto-graded quizzes and instructor assignments.',
       icon: FiHelpCircle,
       color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
     },
     {
-      title: 'Verified Certificates',
+      title: 'Accredited Certificates',
       description: 'Earn downloadable PDF certificates with unique verification IDs.',
       icon: FiAward,
       color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
@@ -133,32 +89,23 @@ const Home = () => {
       {/* PUBLIC NAVBAR */}
       <nav className="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 text-xl font-bold text-white tracking-tight">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+          {/* High Visibility Logo */}
+          <Link to="/" className="flex items-center gap-3 text-2xl md:text-3xl font-extrabold tracking-tight shrink-0">
+            <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 border border-indigo-400/30">
               <FiBookOpen className="w-6 h-6" />
             </div>
-            <span className="bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-              EduVerse
+            <span className="text-2xl md:text-3xl font-extrabold tracking-tight text-white drop-shadow-md">
+              Edu<span className="text-blue-400">Verse</span>
             </span>
           </Link>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-1 max-w-md mx-4">
-            <div className="relative w-full">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search courses, skills, topics..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-              />
-            </div>
-          </form>
+          {/* Search Bar Component with Suggestions */}
+          <div className="hidden md:flex flex-1 max-w-xl mx-4">
+            <SearchBar placeholder="Search courses, instructors, or categories..." />
+          </div>
 
           {/* Nav Links & Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <Link
               to="/courses"
               className="hidden sm:inline-block text-xs font-semibold text-slate-300 hover:text-white transition"
@@ -261,57 +208,87 @@ const Home = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="relative"
             >
-              <div className="relative z-10 bg-slate-900 border border-slate-800 p-4 rounded-3xl shadow-2xl overflow-hidden">
-                <img
-                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop&q=80"
-                  alt="Students learning online"
-                  className="w-full h-80 md:h-96 object-cover rounded-2xl"
-                />
-
-                {/* Floating Badge */}
-                <div className="absolute bottom-8 left-8 bg-slate-950/90 backdrop-blur-md border border-slate-800 p-4 rounded-2xl shadow-xl flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl">
-                    <FiAward />
+              <div className="relative mx-auto max-w-md lg:max-w-none rounded-3xl p-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-2xl shadow-indigo-500/20">
+                <div className="bg-slate-900 rounded-[22px] p-6 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+                        EV
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">Full-Stack MERN Mastery</h4>
+                        <p className="text-xs text-slate-400">Featured Academy Course</p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase">
+                      Enrolling Now
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-white">Over 10,000+ Certificates</p>
-                    <p className="text-[11px] text-slate-400">Issued to Students Worldwide</p>
+
+                  <div className="h-48 rounded-2xl overflow-hidden relative">
+                    <img
+                      src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80"
+                      alt="Coding Course"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-xl">
+                        ▶
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                      <span className="block font-bold text-white">24</span>
+                      <span className="text-[10px] text-slate-400">Lessons</span>
+                    </div>
+                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                      <span className="block font-bold text-white">4.9 ★</span>
+                      <span className="text-[10px] text-slate-400">Rating</span>
+                    </div>
+                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                      <span className="block font-bold text-emerald-400">$49.99</span>
+                      <span className="text-[10px] text-slate-400">Price</span>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Background Blur Effect */}
-              <div className="absolute -top-10 -right-10 w-72 h-72 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* FEATURED CATEGORIES GRID */}
-      <section className="py-16 bg-slate-900/60 border-y border-slate-800/80">
+      {/* TOP CATEGORIES SECTION */}
+      <section className="py-16 bg-slate-900/50 border-y border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-10">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
+          <div className="text-center max-w-xl mx-auto space-y-2">
             <h2 className="text-2xl md:text-3xl font-extrabold text-white">Explore Top Categories</h2>
-            <p className="text-slate-400 text-sm">Discover courses tailored to in-demand technology and creative fields.</p>
+            <p className="text-slate-400 text-sm">
+              Build high-demand tech skills through structured learning paths.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {categories.map((cat, idx) => {
               const Icon = cat.icon;
               return (
                 <div
                   key={idx}
-                  className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl hover:border-slate-700 transition group cursor-pointer"
+                  onClick={() => navigate('/courses')}
+                  className="p-5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl transition group cursor-pointer space-y-3"
                 >
                   <div
-                    className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${cat.color} flex items-center justify-center text-white text-2xl shadow-lg mb-4 group-hover:scale-110 transition`}
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${cat.color} flex items-center justify-center text-white text-xl shadow-lg`}
                   >
                     <Icon />
                   </div>
-                  <h3 className="text-base font-bold text-white group-hover:text-indigo-400 transition">
-                    {cat.title}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">{cat.count}</p>
+                  <div>
+                    <h3 className="text-sm font-bold text-white group-hover:text-indigo-400 transition">
+                      {cat.title}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-1">{cat.count}</p>
+                  </div>
                 </div>
               );
             })}
@@ -319,40 +296,43 @@ const Home = () => {
         </div>
       </section>
 
-      {/* TRENDING COURSES */}
-      <section className="py-20">
+      {/* POPULAR COURSES SHOWCASE */}
+      <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 border-b border-slate-800 pb-4">
             <div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white">Trending Courses</h2>
-              <p className="text-slate-400 text-sm mt-1">Hand-picked courses from expert instructors</p>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white">Popular Published Courses</h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Hand-picked courses taught by verified industry professionals.
+              </p>
             </div>
             <Link
               to="/courses"
-              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition"
+              className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition"
             >
-              View All Courses <FiArrowRight />
+              View Full Catalog <FiArrowRight />
             </Link>
           </div>
 
           {loadingCourses ? (
-            <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800">
-              <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-slate-400 text-sm">Loading courses...</p>
+            <div className="p-16 text-center">
+              <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-slate-400 text-xs">Loading courses showcase...</p>
+            </div>
+          ) : popularCourses.length === 0 ? (
+            <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-400 text-xs">
+              No published courses found in catalog.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map((course) => (
+              {popularCourses.map((course) => (
                 <div
                   key={course._id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between group hover:border-slate-700 transition"
+                  className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl hover:border-slate-700 transition flex flex-col group"
                 >
-                  <div className="relative h-48 overflow-hidden bg-slate-800">
+                  <div className="h-44 bg-slate-950 relative overflow-hidden">
                     <img
-                      src={
-                        course.thumbnail ||
-                        'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80'
-                      }
+                      src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}
                       alt={course.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     />
@@ -372,18 +352,18 @@ const Home = () => {
                     <div className="flex items-center justify-between pt-3 border-t border-slate-800">
                       <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
                         <FiStar className="fill-amber-400" />
-                        <span>4.9 (120 reviews)</span>
+                        <span>{course.rating || 5.0}</span>
                       </div>
-                      <span className="text-base font-extrabold text-white">
-                        {course.price > 0 ? `$${course.price}` : 'Free'}
-                      </span>
+                      <div className="text-emerald-400 font-extrabold text-sm">
+                        {course.price === 0 ? 'Free' : `$${course.price || 49.99}`}
+                      </div>
                     </div>
 
                     <Link
-                      to={isAuthenticated ? `/course-player/${course._id}` : '/login'}
-                      className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 transition"
+                      to={`/courses/${course._id}`}
+                      className="w-full py-2.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5"
                     >
-                      Enroll Now
+                      View Course Details <FiArrowRight />
                     </Link>
                   </div>
                 </div>
@@ -394,10 +374,10 @@ const Home = () => {
       </section>
 
       {/* WHY CHOOSE EDUVERSE */}
-      <section className="py-16 bg-slate-900/60 border-t border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white">Why Choose EduVerse?</h2>
+      <section className="py-16 bg-slate-900/40 border-t border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-10">
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white">Built for World-Class Learning</h2>
             <p className="text-slate-400 text-sm">
               Engineered with modern LMS tools for students, instructors, and administrators.
             </p>

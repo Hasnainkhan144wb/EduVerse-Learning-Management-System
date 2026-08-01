@@ -40,7 +40,7 @@ const Navbar = ({ onToggleSidebar }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-slate-100 font-sans">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
-        {/* Left Side: Mobile Menu Toggle & Logo */}
+        {/* Left Side: Mobile Menu Toggle & High Visibility Logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleSidebar}
@@ -50,19 +50,19 @@ const Navbar = ({ onToggleSidebar }) => {
             <FiMenu className="w-6 h-6" />
           </button>
 
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl tracking-tight text-white">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+          <Link to="/" className="flex items-center gap-3 text-2xl md:text-3xl font-extrabold tracking-tight shrink-0">
+            <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/40 border border-indigo-400/30">
               <FiBookOpen className="w-6 h-6" />
             </div>
-            <span className="hidden sm:inline bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-              EduVerse
+            <span className="hidden sm:inline text-2xl md:text-3xl font-extrabold tracking-tight text-white drop-shadow-md">
+              Edu<span className="text-blue-400">Verse</span>
             </span>
           </Link>
         </div>
 
-        {/* Center: Polished Search Bar Component */}
-        <div className="hidden md:flex items-center max-w-md w-full mx-4">
-          <SearchBar onSearch={handleNavbarSearch} placeholder="Search courses, skills, topics..." />
+        {/* Center: Search Bar with Suggestions Dropdown */}
+        <div className="hidden md:flex items-center max-w-xl w-full mx-4">
+          <SearchBar onSearch={handleNavbarSearch} placeholder="Search courses, instructors, or categories..." />
         </div>
 
         {/* Right Side: Notification & User Menu */}
