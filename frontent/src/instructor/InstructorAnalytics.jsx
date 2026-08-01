@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ResponsiveContainer,
@@ -20,33 +20,72 @@ import {
   FiPieChart,
   FiUsers,
   FiDollarSign,
-  FiAward,
   FiTarget,
+  FiStar,
 } from 'react-icons/fi';
-
-const monthlyEarningsData = [
-  { month: 'Jan', earnings: 1200, enrollments: 45 },
-  { month: 'Feb', earnings: 2100, enrollments: 78 },
-  { month: 'Mar', earnings: 3400, enrollments: 120 },
-  { month: 'Apr', earnings: 4800, enrollments: 165 },
-  { month: 'May', earnings: 6200, enrollments: 210 },
-  { month: 'Jun', earnings: 8500, enrollments: 290 },
-  { month: 'Jul', earnings: 11200, enrollments: 380 },
-];
-
-const courseEnrollmentData = [
-  { course: 'React & Node Masterclass', students: 185 },
-  { course: 'Full-Stack MERN Guide', students: 142 },
-  { course: 'Tailwind CSS UI/UX', students: 98 },
-  { course: 'Advanced TypeScript', students: 64 },
-];
-
-const quizPassRateData = [
-  { name: 'Passed (Score >= 70%)', value: 78, color: '#10b981' },
-  { name: 'Failed / Retake Required', value: 22, color: '#ef4444' },
-];
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
 const InstructorAnalytics = () => {
+  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState({
+    summary: {
+      totalRevenue: 0,
+      totalStudents: 0,
+      avgProgress: 0,
+      coursesCount: 0,
+      averageRating: 5.0,
+    },
+    monthlyRevenue: [],
+    courseEnrollments: [],
+    ratingsBreakdown: [],
+  });
+
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/instructor/analytics');
+        if (res.data && res.data.success) {
+          setAnalytics(res.data.analytics || res.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching instructor analytics:', err);
+        toast.error('Failed to load real-time analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalyticsData();
+  }, []);
+
+  const summary = analytics.summary || {};
+  const monthlyData = analytics.monthlyRevenue || [];
+  const courseData = (analytics.courseEnrollments || []).map((item) => ({
+    course: item.title?.length > 20 ? `${item.title.substring(0, 18)}...` : item.title,
+    students: item.studentCount,
+    progress: item.avgProgress,
+  }));
+
+  const ratingsData = (analytics.ratingsBreakdown || []).map((r, index) => {
+    const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
+    return {
+      name: r.stars,
+      value: r.count,
+      color: colors[index % colors.length],
+    };
+  });
+
+  if (loading) {
+    return (
+      <div className="p-16 text-center">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-slate-400 text-sm font-semibold">Loading real-time MongoDB analytics...</p>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -58,13 +97,13 @@ const InstructorAnalytics = () => {
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
-            Performance Analytics
+            Real-Time Analytics
           </span>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white">
             Instructor Revenue & Student Engagement Studio 📊
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Real-time charts monitoring course sales, enrollment trends, and quiz completion analytics.
+            Real-time MongoDB analytics monitoring monthly revenue, course enrollment growth, student progress, and ratings.
           </p>
         </div>
       </div>
@@ -76,8 +115,8 @@ const InstructorAnalytics = () => {
             <FiDollarSign />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium">YTD Revenue</p>
-            <h3 className="text-2xl font-bold text-white">$11,200</h3>
+            <p className="text-xs text-slate-400 font-medium">Total Gross Revenue</p>
+            <h3 className="text-2xl font-bold text-white">${summary.totalRevenue?.toLocaleString()}</h3>
           </div>
         </div>
 
@@ -87,7 +126,7 @@ const InstructorAnalytics = () => {
           </div>
           <div>
             <p className="text-xs text-slate-400 font-medium">Total Student Enrolments</p>
-            <h3 className="text-2xl font-bold text-white">489</h3>
+            <h3 className="text-2xl font-bold text-white">{summary.totalStudents}</h3>
           </div>
         </div>
 
@@ -96,39 +135,39 @@ const InstructorAnalytics = () => {
             <FiTarget />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium">Avg Completion Rate</p>
-            <h3 className="text-2xl font-bold text-white">84.2%</h3>
+            <p className="text-xs text-slate-400 font-medium">Avg Student Progress</p>
+            <h3 className="text-2xl font-bold text-white">{summary.avgProgress}%</h3>
           </div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
           <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-2xl">
-            <FiAward />
+            <FiStar />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium">Quiz Pass Avg</p>
-            <h3 className="text-2xl font-bold text-white">78.0%</h3>
+            <p className="text-xs text-slate-400 font-medium">Course Rating Score</p>
+            <h3 className="text-2xl font-bold text-white">{summary.averageRating} ★</h3>
           </div>
         </div>
       </div>
 
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Area Chart */}
+        {/* Monthly Revenue Area Chart */}
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <FiTrendingUp className="text-emerald-400" />
-              Monthly Earnings & Revenue ($ USD)
+              Monthly Sales & Revenue Growth ($ USD)
             </h3>
-            <span className="text-xs text-slate-400">2026 Growth</span>
+            <span className="text-xs text-slate-400">Live Database Pipeline</span>
           </div>
 
           <div className="h-72 w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyEarningsData}>
+              <AreaChart data={monthlyData}>
                 <defs>
-                  <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
@@ -145,29 +184,29 @@ const InstructorAnalytics = () => {
                 />
                 <Area
                   type="monotone"
-                  dataKey="earnings"
+                  dataKey="revenue"
                   stroke="#10b981"
                   strokeWidth={3}
                   fillOpacity={1}
-                  fill="url(#colorEarnings)"
+                  fill="url(#colorRevenue)"
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Quiz Pass Rate Donut Chart */}
+        {/* Rating Breakdown Donut Chart */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <FiPieChart className="text-purple-400" />
-            Quiz Pass Rate Distribution
+            Course Rating Distribution
           </h3>
 
           <div className="h-64 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={quizPassRateData}
+                  data={ratingsData}
                   cx="50%"
                   cy="50%"
                   innerRadius={55}
@@ -175,7 +214,7 @@ const InstructorAnalytics = () => {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {quizPassRateData.map((entry, index) => (
+                  {ratingsData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -198,12 +237,12 @@ const InstructorAnalytics = () => {
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
           <FiBarChart2 className="text-blue-400" />
-          Enrolment Comparison by Course
+          Enrolment Distribution & Progress Rates by Course
         </h3>
 
         <div className="h-64 w-full pt-4">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={courseEnrollmentData}>
+            <BarChart data={courseData}>
               <XAxis dataKey="course" stroke="#64748b" fontSize={11} tickLine={false} />
               <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip
@@ -214,7 +253,8 @@ const InstructorAnalytics = () => {
                   color: '#fff',
                 }}
               />
-              <Bar dataKey="students" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="students" fill="#3b82f6" radius={[8, 8, 0, 0]} name="Students Enrolled" />
+              <Bar dataKey="progress" fill="#8b5cf6" radius={[8, 8, 0, 0]} name="Avg Progress %" />
             </BarChart>
           </ResponsiveContainer>
         </div>

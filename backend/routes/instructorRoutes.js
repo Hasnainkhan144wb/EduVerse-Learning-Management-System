@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { getInstructorDashboardStats } = require('../controllers/instructorController');
+const {
+  getInstructorDashboardStats,
+  getInstructorAnalytics,
+} = require('../controllers/instructorController');
 const { getInstructorStudents } = require('../controllers/enrolmentController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -10,6 +13,13 @@ router.get(
   protect,
   authorize('Instructor', 'Admin'),
   getInstructorDashboardStats
+);
+
+router.get(
+  '/analytics',
+  protect,
+  authorize('Instructor', 'Admin'),
+  getInstructorAnalytics
 );
 
 router.get(
