@@ -47,21 +47,42 @@ const getCourses = async (req, res, next) => {
     const limitNum = parseInt(limit, 10);
     const skip = (pageNum - 1) * limitNum;
 
-    const total = await Course.countDocuments(query);
     const courses = await Course.find(query)
       .populate('instructorRef', 'name avatar email')
+      .populate('instructor', 'name avatar email')
       .populate('categoryRef', 'name slug')
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limitNum);
+      .sort(sortOption);
+
+    // Identify orphaned course IDs (where instructor is null/deleted)
+    const orphanedCourseIds = courses
+      .filter((course) => !course.instructorRef && !course.instructor)
+      .map((course) => course._id);
+
+    // Purge orphaned courses from DB immediately
+    if (orphanedCourseIds.length > 0) {
+      await Course.deleteMany({ _id: { $in: orphanedCourseIds } });
+      console.log(`🧹 Automatically purged ${orphanedCourseIds.length} orphaned courses from DB.`);
+    }
+
+    // Filter array to send ONLY valid active instructor courses to frontend
+    const validCourses = courses.filter(
+      (course) => (course.instructorRef || course.instructor) != null
+    );
+
+    const totalCount = validCourses.length;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+    const paginatedCourses = validCourses.slice(skip, skip + limitNum);
 
     res.status(200).json({
       success: true,
-      count: courses.length,
-      total,
-      pages: Math.ceil(total / limitNum),
+      count: paginatedCourses.length,
+      total: totalCount,
+      courses: paginatedCourses,
+      pages: Math.ceil(totalCount / limitNum) || 1,
       currentPage: pageNum,
-      data: courses,
+      data: paginatedCourses,
     });
   } catch (error) {
     next(error);

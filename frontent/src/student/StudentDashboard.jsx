@@ -28,29 +28,7 @@ const StudentDashboard = () => {
         if (response && response.data.success) {
           setEnrolments(response.data.data || []);
         } else {
-          // Fallback mock enrolments
-          setEnrolments([
-            {
-              _id: 'e1',
-              progressPercentage: 85,
-              courseId: {
-                _id: 'c1',
-                title: 'Full-Stack MERN Mastery: Node.js & React',
-                description: 'Build enterprise production applications with Mongo, Express, React, and Node.',
-                thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
-              },
-            },
-            {
-              _id: 'e2',
-              progressPercentage: 100,
-              courseId: {
-                _id: 'c2',
-                title: 'UI/UX Design Tokens & System Architecture',
-                description: 'Master Tailwind CSS v4 design tokens and Figma dev mode integrations.',
-                thumbnail: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=600&auto=format&fit=crop&q=80',
-              },
-            },
-          ]);
+          setEnrolments([]);
         }
       } catch (err) {
         console.error('Error loading student dashboard:', err);

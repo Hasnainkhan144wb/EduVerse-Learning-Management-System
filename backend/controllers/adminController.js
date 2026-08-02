@@ -475,40 +475,171 @@ const approveInstructor = async (req, res, next) => {
   }
 };
 
-// @desc    Delete user completely from database (Approved or Pending Students & Instructors)
+// @desc    Delete user completely with Fail-Safe Cascading Delete (Instructor & Student data cleanup)
 // @route   DELETE /api/admin/users/:id
 // @access  Private (Admin Only)
 const deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
+    console.log(`\n===========================================`);
+    console.log(`🚨 ADMIN DELETE TRIGGERED FOR USER ID: ${id}`);
 
-    const user = await User.findById(id);
-    if (!user) {
+    const userToDelete = await User.findById(id);
+    if (!userToDelete) {
+      console.log(`❌ User with ID ${id} not found in DB.`);
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     // Safety check: Prevent Admin from deleting their own account
     if (req.user && req.user._id && req.user._id.toString() === id.toString()) {
+      console.log(`⚠️ Prevented Admin self-deletion.`);
       return res.status(400).json({
         success: false,
         message: 'Admin cannot delete their own account.',
       });
     }
 
-    // Delete associated notifications
-    await Notification.deleteMany({ userId: id });
+    console.log(`👤 Target User Found: ${userToDelete.name} (${userToDelete.email}) | Role: ${userToDelete.role}`);
 
-    // Permanently remove user from MongoDB User collection
-    await user.deleteOne();
+    // Normalize Role string (handle lowercase/uppercase)
+    const role = userToDelete.role ? userToDelete.role.toLowerCase() : '';
 
-    res.status(200).json({
+    // 🚨 1. INSTRUCTOR CASCADING DELETE
+    if (role === 'instructor') {
+      // Search courses using all possible schema key variants
+      const instructorCourses = await Course.find({
+        $or: [
+          { instructor: id },
+          { instructorId: id },
+          { instructorRef: id },
+          { user: id },
+          { userId: id },
+        ],
+      }).select('_id');
+
+      const courseIds = instructorCourses.map((c) => c._id);
+      console.log(`📚 Found ${courseIds.length} courses owned by this instructor.`);
+
+      if (courseIds.length > 0) {
+        let deletedLessonsCount = 0;
+        let deletedEnrolmentsCount = 0;
+        let deletedPaymentsCount = 0;
+        let deletedReviewsCount = 0;
+        let deletedQuestionsCount = 0;
+
+        try {
+          const Lesson = require('../models/Lesson');
+          const resL = await Lesson.deleteMany({ $or: [{ course: { $in: courseIds } }, { courseId: { $in: courseIds } }] });
+          deletedLessonsCount = resL.deletedCount || 0;
+        } catch (e) {}
+
+        try {
+          const resE = await Enrolment.deleteMany({ $or: [{ course: { $in: courseIds } }, { courseId: { $in: courseIds } }] });
+          deletedEnrolmentsCount = resE.deletedCount || 0;
+        } catch (e) {}
+
+        try {
+          const Payment = require('../models/Payment');
+          const resP = await Payment.deleteMany({ $or: [{ course: { $in: courseIds } }, { courseId: { $in: courseIds } }] });
+          deletedPaymentsCount = resP.deletedCount || 0;
+        } catch (e) {}
+
+        try {
+          const Review = require('../models/Review');
+          const resR = await Review.deleteMany({ $or: [{ course: { $in: courseIds } }, { courseId: { $in: courseIds } }] });
+          deletedReviewsCount = resR.deletedCount || 0;
+        } catch (e) {}
+
+        try {
+          const Question = require('../models/Question');
+          const resQ = await Question.deleteMany({ $or: [{ course: { $in: courseIds } }, { courseId: { $in: courseIds } }] });
+          deletedQuestionsCount = resQ.deletedCount || 0;
+        } catch (e) {}
+
+        const resC = await Course.deleteMany({
+          $or: [
+            { _id: { $in: courseIds } },
+            { instructor: id },
+            { instructorId: id },
+            { instructorRef: id },
+            { user: id },
+            { userId: id },
+          ],
+        });
+
+        console.log(`🧹 Cascading Clean Results for Instructor:
+          - Lessons Deleted: ${deletedLessonsCount}
+          - Enrolments Deleted: ${deletedEnrolmentsCount}
+          - Payments Deleted: ${deletedPaymentsCount}
+          - Reviews Deleted: ${deletedReviewsCount}
+          - Questions Deleted: ${deletedQuestionsCount}
+          - Courses Deleted: ${resC.deletedCount || 0}`);
+      }
+    }
+
+    // 🚨 2. STUDENT CASCADING DELETE
+    if (role === 'student') {
+      let deletedEnrolmentsCount = 0;
+      let deletedPaymentsCount = 0;
+      let deletedReviewsCount = 0;
+      let deletedQuestionsCount = 0;
+
+      try {
+        const resE = await Enrolment.deleteMany({
+          $or: [{ student: id }, { studentId: id }, { user: id }, { userId: id }],
+        });
+        deletedEnrolmentsCount = resE.deletedCount || 0;
+      } catch (e) {}
+
+      try {
+        const Payment = require('../models/Payment');
+        const resP = await Payment.deleteMany({
+          $or: [{ student: id }, { studentId: id }, { user: id }, { userId: id }],
+        });
+        deletedPaymentsCount = resP.deletedCount || 0;
+      } catch (e) {}
+
+      try {
+        const Review = require('../models/Review');
+        const resR = await Review.deleteMany({
+          $or: [{ student: id }, { studentId: id }, { user: id }, { userId: id }],
+        });
+        deletedReviewsCount = resR.deletedCount || 0;
+      } catch (e) {}
+
+      try {
+        const Question = require('../models/Question');
+        const resQ = await Question.deleteMany({
+          $or: [{ student: id }, { studentId: id }, { user: id }, { userId: id }],
+        });
+        deletedQuestionsCount = resQ.deletedCount || 0;
+      } catch (e) {}
+
+      console.log(`🧹 Student Records Cleaned:
+        - Enrolments Deleted: ${deletedEnrolmentsCount}
+        - Payments Deleted: ${deletedPaymentsCount}
+        - Reviews Deleted: ${deletedReviewsCount}
+        - Questions Deleted: ${deletedQuestionsCount}`);
+    }
+
+    // 3. Remove Notifications & User Document
+    try {
+      await Notification.deleteMany({ userId: id });
+    } catch (e) {}
+
+    await User.findByIdAndDelete(id);
+    console.log(`✅ User Document (${userToDelete.name}) Deleted Successfully from DB.`);
+    console.log(`===========================================\n`);
+
+    return res.status(200).json({
       success: true,
-      message: 'User account deleted successfully.',
-      data: { id, name: user.name, email: user.email },
+      message: `${userToDelete.name} (${userToDelete.role}) and all related database records were permanently removed.`,
+      data: { id, name: userToDelete.name, email: userToDelete.email },
     });
   } catch (error) {
+    console.error('🔥 Error in deleteUser Controller:', error);
     if (typeof next === 'function') next(error);
-    else res.status(500).json({ success: false, message: error.message });
+    else return res.status(500).json({ success: false, message: error.message || 'Server Error while deleting user' });
   }
 };
 
