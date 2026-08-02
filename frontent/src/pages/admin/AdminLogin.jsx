@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -17,6 +17,22 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { updateUserState, setTokenState } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-redirect if already authenticated as Admin
+  useEffect(() => {
+    const savedAdmin = localStorage.getItem('adminUser') || localStorage.getItem('user');
+    const savedToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
+    if (savedToken && savedAdmin) {
+      try {
+        const parsed = JSON.parse(savedAdmin);
+        if (parsed && parsed.role === 'Admin') {
+          navigate('/admin-dashboard/users', { replace: true });
+        }
+      } catch (e) {
+        // Continue to login
+      }
+    }
+  }, [navigate]);
 
   const {
     register,
@@ -57,10 +73,8 @@ const AdminLogin = () => {
 
         toast.success('Admin Security Authentication Successful! 🛡️');
 
-        // Immediate Smooth Redirect to Admin Dashboard
-        setTimeout(() => {
-          navigate('/admin/dashboard', { replace: true });
-        }, 300);
+        // 🛠️ EXPLICIT REDIRECT TO ADMIN DASHBOARD / USERS DIRECTORY
+        navigate('/admin-dashboard/users', { replace: true });
       }
     } catch (err) {
       console.error('Admin Login Failure:', err);

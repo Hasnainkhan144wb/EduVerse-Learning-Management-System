@@ -177,6 +177,26 @@ function App() {
         <Route path="settings" element={<PlatformSettings />} />
       </Route>
 
+      {/* Admin Route Aliases (/admin/users, /admin/dashboard, /admin/courses) */}
+      <Route
+        path="/admin/*"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout />
+          </AdminProtectedRoute>
+        }
+      >
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="approvals" element={<AdminDashboard />} />
+        <Route path="users" element={<ManageUsers />} />
+        <Route path="courses" element={<ManageCourses />} />
+        <Route path="categories" element={<ManageCategories />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="certificates" element={<ManageCertificates />} />
+        <Route path="settings" element={<PlatformSettings />} />
+      </Route>
+
       {/* Fallback Catch-all Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

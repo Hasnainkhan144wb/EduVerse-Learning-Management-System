@@ -33,10 +33,10 @@ const LoginPage = () => {
       toast.success(`Welcome back, ${result.user.name}! 👋`);
       if (from) {
         navigate(from, { replace: true });
+      } else if (result.user.role === 'Admin') {
+        navigate('/admin-dashboard/users', { replace: true });
       } else if (result.user.role === 'Instructor') {
         navigate('/instructor', { replace: true });
-      } else if (result.user.role === 'Admin') {
-        navigate('/admin', { replace: true });
       } else {
         navigate('/student', { replace: true });
       }
