@@ -2,33 +2,42 @@ const mongoose = require('mongoose');
 
 const questionSchema = new mongoose.Schema(
   {
-    quizId: {
+    course: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Quiz',
+      ref: 'Course',
       required: true,
     },
-    questionText: {
-      type: String,
-      required: [true, 'Please add question text'],
+    lesson: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Lesson',
+      default: null,
     },
-    type: {
-      type: String,
-      enum: ['MCQ', 'TrueFalse', 'FillBlank'],
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
-      default: 'MCQ',
     },
-    options: [
-      {
-        type: String,
-      },
-    ],
-    correctAnswers: {
-      type: mongoose.Schema.Types.Mixed,
-      required: [true, 'Please specify the correct answer(s)'],
+    instructor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
-    explanation: {
+    title: {
       type: String,
-      default: '',
+      required: [true, 'Please add a question title'],
+      trim: true,
+    },
+    question: {
+      type: String,
+      required: [true, 'Please add question details'],
+    },
+    answer: {
+      type: String,
+      default: null,
+    },
+    isAnswered: {
+      type: Boolean,
+      default: false,
     },
   },
   {

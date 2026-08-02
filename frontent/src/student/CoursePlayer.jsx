@@ -20,6 +20,7 @@ import {
   FiSend,
   FiCheck,
   FiSliders,
+  FiMessageSquare,
 } from 'react-icons/fi';
 
 const CoursePlayer = () => {
@@ -37,8 +38,15 @@ const CoursePlayer = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   // Tab & Accordion state
-  const [activeTab, setActiveTab] = useState('overview'); // overview, pdf, notes, source
+  const [activeTab, setActiveTab] = useState('overview'); // overview, pdf, notes, source, qna
   const [expandedSections, setExpandedSections] = useState({});
+
+  // Q&A Discussion Tab State
+  const [qnaQuestions, setQnaQuestions] = useState([]);
+  const [qnaLoading, setQnaLoading] = useState(false);
+  const [newQTitle, setNewQTitle] = useState('');
+  const [newQText, setNewQText] = useState('');
+  const [postingQ, setPostingQ] = useState(false);
 
   // Quiz Modal State
   const [quizModalOpen, setQuizModalOpen] = useState(false);
@@ -98,6 +106,58 @@ const CoursePlayer = () => {
   useEffect(() => {
     fetchCourseDetails();
   }, [fetchCourseDetails]);
+
+  // Fetch Q&A questions for this course
+  const fetchLessonQnA = useCallback(async () => {
+    if (!courseId) return;
+    try {
+      setQnaLoading(true);
+      const res = await api.get('/questions/student');
+      if (res.data && res.data.success) {
+        const filtered = (res.data.data || []).filter(
+          (q) => (q.course?._id || q.course) === courseId
+        );
+        setQnaQuestions(filtered);
+      }
+    } catch (err) {
+      console.error('Error fetching Q&A for course player:', err);
+    } finally {
+      setQnaLoading(false);
+    }
+  }, [courseId]);
+
+  useEffect(() => {
+    if (activeTab === 'qna') {
+      fetchLessonQnA();
+    }
+  }, [activeTab, fetchLessonQnA]);
+
+  const handlePostLessonQuestion = async (e) => {
+    e.preventDefault();
+    if (!newQTitle.trim() || !newQText.trim()) {
+      return toast.error('Please enter both title and question text');
+    }
+    try {
+      setPostingQ(true);
+      const res = await api.post('/questions', {
+        courseId,
+        lessonId: activeLesson?._id || null,
+        title: newQTitle,
+        question: newQText,
+      });
+      if (res.data && res.data.success) {
+        toast.success('Question submitted to course instructor!');
+        setNewQTitle('');
+        setNewQText('');
+        fetchLessonQnA();
+      }
+    } catch (err) {
+      console.error('Error posting question:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit question');
+    } finally {
+      setPostingQ(false);
+    }
+  };
 
   // Handle Playback speed changes
   const handleSpeedChange = (speed) => {
@@ -455,6 +515,19 @@ const CoursePlayer = () => {
                   Source Code & Attachments
                 </button>
               )}
+              <button
+                onClick={() => {
+                  setActiveTab('qna');
+                  fetchLessonQnA();
+                }}
+                className={`pb-3 text-sm font-semibold border-b-2 transition flex items-center gap-1.5 ${
+                  activeTab === 'qna'
+                    ? 'border-blue-500 text-white font-bold'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <FiMessageSquare className="text-amber-400" /> Q&A & Discussion
+              </button>
             </div>
 
             {/* Tab Contents */}
@@ -509,6 +582,84 @@ const CoursePlayer = () => {
                 <pre className="p-4 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-mono text-emerald-400 overflow-x-auto">
                   {activeLesson?.sourceCode || '// No source code attachments provided for this lesson.'}
                 </pre>
+              </div>
+            )}
+
+            {activeTab === 'qna' && (
+              <div className="space-y-6">
+                {/* Ask Question Form */}
+                <form onSubmit={handlePostLessonQuestion} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                    <FiMessageSquare className="text-blue-400" /> Ask Question for "{activeLesson?.title || 'Lesson'}"
+                  </h4>
+                  <input
+                    type="text"
+                    value={newQTitle}
+                    onChange={(e) => setNewQTitle(e.target.value)}
+                    placeholder="Question subject / title..."
+                    className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                  <textarea
+                    rows={3}
+                    value={newQText}
+                    onChange={(e) => setNewQText(e.target.value)}
+                    placeholder="Describe your issue or code problem in detail..."
+                    className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+                    required
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={postingQ}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <FiSend /> {postingQ ? 'Submitting...' : 'Post Question'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Course Questions List */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Discussion Threads ({qnaQuestions.length})
+                  </h4>
+                  {qnaLoading ? (
+                    <div className="p-8 text-center text-xs text-slate-500">
+                      Loading Q&A discussions...
+                    </div>
+                  ) : qnaQuestions.length === 0 ? (
+                    <div className="p-6 text-center bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-500">
+                      No questions asked for this course yet. Be the first to ask!
+                    </div>
+                  ) : (
+                    qnaQuestions.map((q) => (
+                      <div key={q._id} className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-xs font-bold text-white">{q.title}</h5>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              q.isAnswered
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}
+                          >
+                            {q.isAnswered ? 'Answered ✓' : 'Pending Answer'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300">{q.question}</p>
+                        {q.isAnswered && q.answer && (
+                          <div className="mt-2 pt-2 border-t border-slate-800/80 bg-blue-950/30 p-3 rounded-xl border border-blue-500/20 space-y-1">
+                            <span className="text-[11px] font-bold text-blue-300 block">
+                              Instructor Reply:
+                            </span>
+                            <p className="text-xs text-slate-200">{q.answer}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>

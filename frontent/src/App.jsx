@@ -26,6 +26,7 @@ import StudentAssignments from './student/StudentAssignments';
 import Wishlist from './student/Wishlist';
 import Checkout from './student/Checkout';
 import StudentCertificates from './student/StudentCertificates';
+import StudentQnADiscussions from './pages/student/StudentQuestions';
 
 import InstructorDashboard from './instructor/InstructorDashboard';
 import CourseBuilder from './instructor/CourseBuilder';
@@ -125,6 +126,7 @@ function App() {
         <Route path="courses" element={<MyCourses />} />
         <Route path="my-courses" element={<MyCourses />} />
         <Route path="assignments" element={<StudentAssignments />} />
+        <Route path="questions" element={<StudentQnADiscussions />} />
         <Route path="wishlist" element={<Wishlist />} />
         <Route path="certificates" element={<StudentCertificates />} />
         <Route path="profile" element={<ProfilePage />} />
@@ -142,55 +144,40 @@ function App() {
         }
       >
         <Route index element={<InstructorDashboard />} />
-        <Route path="courses" element={<InstructorDashboard />} />
+        <Route path="courses" element={<CourseBuilder />} />
         <Route path="courses/create" element={<CreateCourse />} />
+        <Route path="courses/edit/:courseId" element={<CreateCourse />} />
         <Route path="courses/:courseId/lessons" element={<ManageLessons />} />
-        <Route path="quizzes/create" element={<CreateQuiz />} />
-        <Route path="quizzes/create/:lessonId" element={<CreateQuiz />} />
+        <Route path="quiz/create" element={<CreateQuiz />} />
         <Route path="assignments/manage" element={<ManageAssignments />} />
-        <Route path="assignments/manage/:lessonId" element={<ManageAssignments />} />
         <Route path="students" element={<EnrolledStudents />} />
         <Route path="questions" element={<StudentQuestions />} />
-        <Route path="courses/builder" element={<CourseBuilder />} />
-        <Route path="courses/edit/:courseId" element={<CourseBuilder />} />
         <Route path="analytics" element={<InstructorAnalytics />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 
-      {/* Protected Admin Layout & Command Center (Strict Admin Guard) */}
+      {/* Protected Admin Portal Layout */}
       <Route
-        path="/admin/*"
+        path="/admin-dashboard"
         element={
           <AdminProtectedRoute>
             <AdminLayout />
           </AdminProtectedRoute>
         }
       >
+        <Route index element={<AdminDashboard />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="approvals" element={<ManageUsers />} />
+        <Route path="approvals" element={<AdminDashboard />} />
+        <Route path="users" element={<ManageUsers />} />
         <Route path="courses" element={<ManageCourses />} />
         <Route path="categories" element={<ManageCategories />} />
-        <Route path="users" element={<ManageUsers />} />
-        <Route path="reports" element={<Reports />} />
         <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="reports" element={<Reports />} />
         <Route path="certificates" element={<ManageCertificates />} />
         <Route path="settings" element={<PlatformSettings />} />
       </Route>
 
-      {/* Fallback & Unauthorized Routes */}
-      <Route
-        path="/unauthorized"
-        element={
-          <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-4 text-center">
-            <h1 className="text-3xl font-bold text-red-500 mb-2">403 - Access Denied</h1>
-            <p className="text-slate-400 mb-6">You do not have permission to access this page.</p>
-            <a href="/" className="px-6 py-2.5 bg-indigo-600 rounded-xl text-sm font-semibold">
-              Return to Homepage
-            </a>
-          </div>
-        }
-      />
-
+      {/* Fallback Catch-all Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -19,7 +19,7 @@ const enrolmentRoutes = require('./routes/enrolmentRoutes');
 const quizRoutes = require('./routes/quizRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
-const discussionRoutes = require('./routes/discussionRoutes');
+const questionRoutes = require('./routes/questionRoutes');
 const instructorRoutes = require('./routes/instructorRoutes');
 
 const { protect } = require('./middleware/authMiddleware');
@@ -67,7 +67,8 @@ app.use('/api/enrolments', enrolmentRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
-app.use('/api/questions', discussionRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/discussions', questionRoutes);
 
 // Direct Aliases
 app.post('/api/users/wishlist', protect, toggleWishlist);
