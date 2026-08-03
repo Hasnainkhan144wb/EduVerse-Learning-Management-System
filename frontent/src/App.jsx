@@ -29,6 +29,7 @@ import StudentCertificates from './student/StudentCertificates';
 import StudentQnADiscussions from './pages/student/StudentQuestions';
 
 import InstructorDashboard from './instructor/InstructorDashboard';
+import InstructorCourses from './instructor/InstructorCourses';
 import CourseBuilder from './instructor/CourseBuilder';
 import CreateCourse from './instructor/CreateCourse';
 import ManageLessons from './instructor/ManageLessons';
@@ -144,8 +145,10 @@ function App() {
         }
       >
         <Route index element={<InstructorDashboard />} />
-        <Route path="courses" element={<CourseBuilder />} />
+        <Route path="courses" element={<InstructorCourses />} />
         <Route path="courses/create" element={<CreateCourse />} />
+        <Route path="create-course" element={<CreateCourse />} />
+        <Route path="builder" element={<CourseBuilder />} />
         <Route path="courses/edit/:courseId" element={<CreateCourse />} />
         <Route path="courses/:courseId/lessons" element={<ManageLessons />} />
         <Route path="quiz/create" element={<CreateQuiz />} />
