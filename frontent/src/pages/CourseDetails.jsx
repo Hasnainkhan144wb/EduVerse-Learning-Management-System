@@ -276,7 +276,14 @@ const CourseDetails = () => {
               </p>
             </div>
 
-            {isEnrolled ? (
+            {user?.role === 'Instructor' || user?.role === 'Admin' ? (
+              <button
+                onClick={() => navigate(user?.role === 'Instructor' ? '/instructor/courses' : '/admin-dashboard')}
+                className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2"
+              >
+                Instructor Studio • Manage Courses <FiArrowRight />
+              </button>
+            ) : isEnrolled ? (
               <Link
                 to={`/course-player/${course._id}`}
                 className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition"

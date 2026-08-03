@@ -10,18 +10,42 @@ const enrolStudent = async (req, res, next) => {
   try {
     const { courseId } = req.params;
     const studentId = req.user._id;
+    const userRole = req.user.role;
+
+    // 1. Role Guard: Instructors & Admins cannot enroll as students
+    if (userRole === 'Instructor' || userRole === 'Admin') {
+      return res.status(400).json({
+        success: false,
+        message: 'Instructors and Admins are not allowed to enroll in courses.',
+      });
+    }
 
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
-    // Check if already enrolled
-    const existingEnrolment = await Enrolment.findOne({ studentId, courseId });
+    // 2. Ownership Guard
+    const courseInstructorId = course.instructorRef || course.instructor;
+    if (courseInstructorId && courseInstructorId.toString() === studentId.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot enroll in your own course!',
+      });
+    }
+
+    // 3. Check if already enrolled
+    const existingEnrolment = await Enrolment.findOne({
+      $or: [
+        { studentId, courseId },
+        { student: studentId, course: courseId },
+      ],
+    });
+
     if (existingEnrolment) {
       return res.status(400).json({
         success: false,
-        message: 'Student is already enrolled in this course',
+        message: 'You are already enrolled in this course',
         data: existingEnrolment,
       });
     }
@@ -168,21 +192,31 @@ const getInstructorStudents = async (req, res, next) => {
     const instructorId = req.user._id;
 
     // Find all courses created by this instructor
-    const myCourses = await Course.find({ instructorRef: instructorId }).select('_id title');
+    const myCourses = await Course.find({
+      $or: [{ instructorRef: instructorId }, { instructor: instructorId }],
+    }).select('_id title');
     const myCourseIds = myCourses.map((c) => c._id);
 
     // Find all enrolments for these courses or all enrolments if admin/testing
     const query = myCourseIds.length > 0 ? { courseId: { $in: myCourseIds } } : {};
 
     const enrolments = await Enrolment.find(query)
-      .populate('studentId', 'name email avatar createdAt')
+      .populate({
+        path: 'studentId',
+        select: 'name email avatar role createdAt',
+        match: { role: 'Student' }, // 🚨 ONLY POPULATE REAL STUDENTS
+      })
       .populate('courseId', 'title thumbnail categoryRef')
       .sort({ createdAt: -1 });
 
+    // Filter out enrolments where student populated to null (instructors/admins)
+    const validEnrolments = enrolments.filter((e) => e.studentId !== null && e.studentId !== undefined);
+
     res.status(200).json({
       success: true,
-      count: enrolments.length,
-      data: enrolments,
+      count: validEnrolments.length,
+      data: validEnrolments,
+      enrolments: validEnrolments,
     });
   } catch (error) {
     if (typeof next === 'function') next(error);
