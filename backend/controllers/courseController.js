@@ -70,9 +70,6 @@ const getCourses = async (req, res, next) => {
     );
 
     const totalCount = validCourses.length;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
-    const skip = (pageNum - 1) * limitNum;
     const paginatedCourses = validCourses.slice(skip, skip + limitNum);
 
     res.status(200).json({
@@ -468,6 +465,7 @@ const approveInstructor = async (req, res, next) => {
 
 module.exports = {
   getCourses,
+  getPublishedCourses: getCourses,
   getCourseById,
   createCourse,
   updateCourse,

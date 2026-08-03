@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   getCourses,
+  getPublishedCourses,
   getCourseById,
   createCourse,
   updateCourse,
@@ -18,7 +19,7 @@ const {
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 // Public course routes
-router.get('/', getCourses);
+router.get('/', getPublishedCourses || getCourses);
 router.get('/:id', getCourseById);
 
 // Instructor / Admin course CRUD routes

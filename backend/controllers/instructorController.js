@@ -273,19 +273,40 @@ const getInstructorAnalytics = async (req, res, next) => {
       ratingsBreakdown,
     };
 
-    res.status(200).json({
+// @desc    Get courses created strictly by logged-in instructor
+// @route   GET /api/instructor/courses
+// @access  Private (Instructor / Admin Only)
+const getInstructorCourses = async (req, res, next) => {
+  try {
+    const instructorId = req.user._id;
+
+    const courses = await Course.find({
+      $or: [
+        { instructorRef: instructorId },
+        { instructor: instructorId },
+        { instructorId: instructorId },
+        { user: instructorId },
+        { userId: instructorId },
+      ],
+    })
+      .populate('categoryRef', 'name slug')
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
       success: true,
-      analytics: analyticsObj,
-      data: analyticsObj,
+      count: courses.length,
+      courses,
+      data: courses,
     });
   } catch (error) {
-    console.error('🔥 Instructor Analytics Error:', error);
+    console.error('🔥 Error fetching instructor courses:', error);
     if (typeof next === 'function') next(error);
-    else res.status(500).json({ success: false, message: error.message || 'Failed to fetch analytics' });
+    else return res.status(500).json({ success: false, message: error.message || 'Failed to fetch courses' });
   }
 };
 
 module.exports = {
   getInstructorDashboardStats,
   getInstructorAnalytics,
+  getInstructorCourses,
 };

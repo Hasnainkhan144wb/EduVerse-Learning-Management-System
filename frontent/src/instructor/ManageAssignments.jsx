@@ -48,11 +48,12 @@ const ManageAssignments = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await api.get('/courses?status=Published');
+        const response = await api.get('/instructor/courses');
         if (response.data.success) {
-          setCourses(response.data.data);
-          if (response.data.data.length > 0 && !selectedCourseId) {
-            setSelectedCourseId(response.data.data[0]._id);
+          const list = response.data.courses || response.data.data || [];
+          setCourses(list);
+          if (list.length > 0 && !selectedCourseId) {
+            setSelectedCourseId(list[0]._id);
           }
         }
       } catch (err) {

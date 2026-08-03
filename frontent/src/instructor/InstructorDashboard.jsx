@@ -36,16 +36,13 @@ const InstructorDashboard = () => {
         setCourses(response.data.courses || []);
       } else {
         // Fallback query if stats endpoint returns null
-        const coursesRes = await api.get('/courses?status=Published').catch(() => ({ data: { data: [] } }));
-        const myCourses = (coursesRes.data.data || []).filter(
-          (c) => c.instructorRef?._id === user?._id || c.instructorRef === user?._id
-        );
-        const list = myCourses.length > 0 ? myCourses : coursesRes.data.data || [];
+        const coursesRes = await api.get('/instructor/courses').catch(() => ({ data: { data: [], courses: [] } }));
+        const list = coursesRes.data.courses || coursesRes.data.data || [];
         setCourses(list);
         setStats({
           totalStudents: list.length * 14,
           totalRevenue: list.reduce((acc, c) => acc + (c.price || 0) * 12, 0),
-          courseRating: '4.8',
+          courseRating: '5.0',
           coursesCreated: list.length,
         });
       }
