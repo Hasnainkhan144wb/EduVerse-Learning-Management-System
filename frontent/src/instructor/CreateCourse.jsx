@@ -61,7 +61,37 @@ const CreateCourse = () => {
     setRequirements(requirements.filter((_, i) => i !== index));
   };
 
+  const validateForm = (data) => {
+    if (!data.title || !data.title.trim()) {
+      toast.error('Please enter Course Title!');
+      return false;
+    }
+    if (!data.description || !data.description.trim()) {
+      toast.error('Please enter Course Description!');
+      return false;
+    }
+    if (!data.categoryRef) {
+      toast.error('Please select a Category!');
+      return false;
+    }
+    if (!data.level) {
+      toast.error('Please select Course Level!');
+      return false;
+    }
+    if (data.price === '' || data.price === null || data.price === undefined) {
+      toast.error('Please set a Course Price!');
+      return false;
+    }
+    if (!data.thumbnail || !data.thumbnail.trim()) {
+      toast.error('Please provide a Thumbnail image URL!');
+      return false;
+    }
+    return true;
+  };
+
   const onSubmit = async (data) => {
+    if (!validateForm(data)) return;
+
     try {
       setLoading(true);
       const filteredObjectives = objectives.filter((obj) => obj.trim() !== '');

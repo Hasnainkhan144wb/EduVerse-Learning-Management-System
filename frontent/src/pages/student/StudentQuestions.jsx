@@ -60,8 +60,14 @@ const StudentQuestions = () => {
 
   const handleSubmitQuestion = async (e) => {
     e.preventDefault();
-    if (!formData.courseId || !formData.title.trim() || !formData.question.trim()) {
-      return toast.error('Please fill in all required fields');
+    if (!formData.courseId) {
+      return toast.error('Please select a Course for your question!');
+    }
+    if (!formData.title || !formData.title.trim()) {
+      return toast.error('Please enter a Question Title!');
+    }
+    if (!formData.question || !formData.question.trim()) {
+      return toast.error('Please type your Question details!');
     }
 
     try {

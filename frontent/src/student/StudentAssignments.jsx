@@ -98,12 +98,20 @@ const StudentAssignments = () => {
   const onSubmitAssignmentFile = async (data) => {
     if (!targetAssignment) return;
 
+    const hasFile = data.file && data.file[0];
+    const hasUrl = data.fileUrl && data.fileUrl.trim();
+
+    if (!hasFile && !hasUrl) {
+      toast.error('Please upload a file or provide a Submission File URL!');
+      return;
+    }
+
     try {
       setSubmitting(true);
       const formData = new FormData();
-      if (data.file && data.file[0]) {
+      if (hasFile) {
         formData.append('assignment', data.file[0]);
-      } else if (data.fileUrl) {
+      } else if (hasUrl) {
         formData.append('fileUrl', data.fileUrl);
       }
       formData.append('notes', data.notes || '');

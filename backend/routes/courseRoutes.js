@@ -17,6 +17,7 @@ const {
   approveInstructor,
 } = require('../controllers/courseController');
 const { protect, authorize } = require('../middleware/authMiddleware');
+const { validateCourseInput } = require('../middleware/validateCourse');
 
 // Public course routes
 router.get('/published', getPublishedCourses);
@@ -24,8 +25,8 @@ router.get('/', getPublishedCourses || getCourses);
 router.get('/:id', getCourseById);
 
 // Instructor / Admin course CRUD routes
-router.post('/', protect, authorize('Instructor', 'Admin'), createCourse);
-router.put('/:id', protect, authorize('Instructor', 'Admin'), updateCourse);
+router.post('/', protect, authorize('Instructor', 'Admin'), validateCourseInput, createCourse);
+router.put('/:id', protect, authorize('Instructor', 'Admin'), validateCourseInput, updateCourse);
 router.delete('/:id', protect, authorize('Instructor', 'Admin'), deleteCourse);
 
 // Section management routes
