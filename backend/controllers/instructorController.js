@@ -273,6 +273,18 @@ const getInstructorAnalytics = async (req, res, next) => {
       ratingsBreakdown,
     };
 
+    return res.status(200).json({
+      success: true,
+      analytics: analyticsObj,
+      data: analyticsObj,
+    });
+  } catch (error) {
+    console.error('🔥 Instructor Analytics Error:', error);
+    if (typeof next === 'function') next(error);
+    else return res.status(500).json({ success: false, message: error.message || 'Failed to fetch analytics' });
+  }
+};
+
 // @desc    Get courses created strictly by logged-in instructor
 // @route   GET /api/instructor/courses
 // @access  Private (Instructor / Admin Only)
