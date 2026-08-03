@@ -19,6 +19,7 @@ const {
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 // Public course routes
+router.get('/published', getPublishedCourses);
 router.get('/', getPublishedCourses || getCourses);
 router.get('/:id', getCourseById);
 

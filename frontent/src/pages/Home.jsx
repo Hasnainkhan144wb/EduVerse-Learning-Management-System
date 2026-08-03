@@ -36,12 +36,14 @@ const Home = () => {
     const fetchLandingData = async () => {
       try {
         setLoadingCourses(true);
-        const res = await api.get('/courses?status=Published');
-        if (res.data && res.data.success) {
-          setPopularCourses((res.data.data || []).slice(0, 6));
+        const res = await api.get(`/courses/published?t=${Date.now()}`);
+        if (res.data) {
+          const courseList = res.data.courses || res.data.data || (Array.isArray(res.data) ? res.data : []);
+          setPopularCourses(courseList.slice(0, 6));
         }
       } catch (err) {
         console.error('Error loading landing page courses:', err);
+        setPopularCourses([]);
       } finally {
         setLoadingCourses(false);
       }

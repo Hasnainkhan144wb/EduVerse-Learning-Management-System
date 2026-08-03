@@ -42,8 +42,8 @@ const BrowseCourses = () => {
           api.get('/categories').catch(() => null),
         ]);
 
-        if (coursesRes && coursesRes.data && coursesRes.data.success) {
-          let list = coursesRes.data.data || [];
+        if (coursesRes && coursesRes.data) {
+          let list = coursesRes.data.courses || coursesRes.data.data || (Array.isArray(coursesRes.data) ? coursesRes.data : []);
           if (priceFilter === 'free') {
             list = list.filter((c) => c.price === 0);
           } else if (priceFilter === 'paid') {

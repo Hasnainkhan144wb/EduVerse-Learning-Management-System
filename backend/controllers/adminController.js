@@ -676,13 +676,15 @@ const updateCourseStatus = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Status value is required.' });
     }
 
-    const isPublished = status === 'Published';
+    const isPublished = status === 'Published' || status === 'Approved';
+    const finalStatus = isPublished ? 'Published' : status;
 
     const updatedCourse = await Course.findByIdAndUpdate(
       id,
       {
-        status: status,
+        status: finalStatus,
         isPublished: isPublished,
+        isApproved: isPublished ? true : undefined,
       },
       { new: true, runValidators: true }
     );
@@ -722,6 +724,39 @@ const getAdminCategories = async (req, res, next) => {
   }
 };
 
+// @desc    Approve and publish course by Admin
+// @route   PUT /api/admin/courses/:id/approve OR POST /api/admin/courses/:id/approve
+// @access  Private (Admin)
+const approveCourse = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.findByIdAndUpdate(
+      id,
+      {
+        isApproved: true,
+        status: 'Published',
+        isPublished: true,
+      },
+      { new: true }
+    );
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Course approved and published successfully!',
+      course,
+      data: course,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getPendingUsers,
@@ -740,5 +775,6 @@ module.exports = {
   deleteUser,
   getAdminCourses,
   updateCourseStatus,
+  approveCourse,
   getAdminCategories,
 };

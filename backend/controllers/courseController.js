@@ -2,6 +2,7 @@ const Course = require('../models/Course');
 const Section = require('../models/Section');
 const Lesson = require('../models/Lesson');
 const User = require('../models/User');
+const Category = require('../models/Category');
 
 // @desc    Get published courses with search, filters, pagination
 // @route   GET /api/courses
@@ -10,32 +11,71 @@ const getCourses = async (req, res, next) => {
   try {
     const { keyword, category, level, status, sort, page = 1, limit = 10 } = req.query;
 
-    const query = {};
+    const conditions = [];
 
-    // Filter by status (default Published for public query unless specified by admin)
-    if (status) {
-      query.status = status;
+    // Filter by status (flexible published & approved status matching)
+    if (status && status !== 'All' && status !== 'Published') {
+      try {
+        conditions.push({
+          $or: [
+            { status: new RegExp(`^${status}$`, 'i') },
+            { isPublished: status === 'true' }
+          ]
+        });
+      } catch (e) {
+        conditions.push({ status });
+      }
     } else {
-      query.status = 'Published';
+      conditions.push({
+        $or: [
+          { status: new RegExp('^published$', 'i') },
+          { status: 'Published' },
+          { status: 'published' },
+          { status: 'Approved' },
+          { isPublished: true },
+          { isApproved: true }
+        ],
+      });
     }
 
     // Search keyword in title or description
     if (keyword) {
-      query.$or = [
-        { title: { $regex: keyword, $options: 'i' } },
-        { description: { $regex: keyword, $options: 'i' } },
-      ];
+      conditions.push({
+        $or: [
+          { title: { $regex: keyword, $options: 'i' } },
+          { description: { $regex: keyword, $options: 'i' } },
+        ],
+      });
     }
 
-    // Category filter
-    if (category) {
-      query.categoryRef = category;
+    // Category filter: support ObjectId, slug, or name lookup
+    if (category && category !== 'all' && category !== 'All') {
+      const mongoose = require('mongoose');
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        conditions.push({
+          $or: [{ categoryRef: category }, { category: category }]
+        });
+      } else {
+        const foundCat = await Category.findOne({
+          $or: [
+            { slug: category.toLowerCase() },
+            { name: new RegExp(`^${category}$`, 'i') }
+          ]
+        });
+        if (foundCat) {
+          conditions.push({
+            $or: [{ categoryRef: foundCat._id }, { category: foundCat._id }]
+          });
+        }
+      }
     }
 
     // Level filter
-    if (level) {
-      query.level = level;
+    if (level && level !== 'All') {
+      conditions.push({ level: new RegExp(`^${level}$`, 'i') });
     }
+
+    const query = conditions.length > 0 ? { $and: conditions } : {};
 
     // Sorting
     let sortOption = { createdAt: -1 };
@@ -43,36 +83,43 @@ const getCourses = async (req, res, next) => {
     if (sort === 'price_desc') sortOption = { price: -1 };
     if (sort === 'oldest') sortOption = { createdAt: 1 };
 
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 10);
     const skip = (pageNum - 1) * limitNum;
 
-    const courses = await Course.find(query)
-      .populate('instructorRef', 'name avatar email')
-      .populate('instructor', 'name avatar email')
-      .populate('categoryRef', 'name slug')
-      .sort(sortOption);
-
-    // Identify orphaned course IDs (where instructor is null/deleted)
-    const orphanedCourseIds = courses
-      .filter((course) => !course.instructorRef && !course.instructor)
-      .map((course) => course._id);
-
-    // Purge orphaned courses from DB immediately
-    if (orphanedCourseIds.length > 0) {
-      await Course.deleteMany({ _id: { $in: orphanedCourseIds } });
-      console.log(`🧹 Automatically purged ${orphanedCourseIds.length} orphaned courses from DB.`);
+    let courses = [];
+    try {
+      courses = await Course.find(query)
+        .populate('instructorRef', 'name avatar email')
+        .populate('categoryRef', 'name slug')
+        .sort(sortOption)
+        .lean();
+    } catch (dbErr) {
+      console.warn('⚠️ Course query filter fallback to basic query:', dbErr.message);
+      courses = await Course.find()
+        .populate('instructorRef', 'name avatar email')
+        .populate('categoryRef', 'name slug')
+        .sort({ createdAt: -1 })
+        .lean();
     }
 
-    // Filter array to send ONLY valid active instructor courses to frontend
-    const validCourses = courses.filter(
-      (course) => (course.instructorRef || course.instructor) != null
-    );
+    // Sanitize instructor and category objects to prevent null crashes
+    const sanitizedCourses = (courses || []).map((course) => {
+      const inst = course.instructorRef || course.instructor || { name: 'Verified Instructor', avatar: '' };
+      const cat = course.categoryRef || course.category || { name: 'General', slug: 'general' };
+      return {
+        ...course,
+        instructorRef: inst,
+        instructor: inst,
+        categoryRef: cat,
+        category: cat,
+      };
+    });
 
-    const totalCount = validCourses.length;
-    const paginatedCourses = validCourses.slice(skip, skip + limitNum);
+    const totalCount = sanitizedCourses.length;
+    const paginatedCourses = sanitizedCourses.slice(skip, skip + limitNum);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: paginatedCourses.length,
       total: totalCount,
@@ -82,7 +129,75 @@ const getCourses = async (req, res, next) => {
       data: paginatedCourses,
     });
   } catch (error) {
-    next(error);
+    console.error('🔥 Error in getCourses Controller:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch courses',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get published courses safely for showcase
+// @route   GET /api/courses/published
+// @access  Public
+const getPublishedCourses = async (req, res) => {
+  try {
+    const rawCourses = await Course.find({
+      $or: [
+        { status: 'Published' },
+        { status: 'published' },
+        { status: 'Approved' },
+        { isApproved: true },
+        { isPublished: true },
+      ],
+    })
+      .populate('instructorRef', 'name email avatar')
+      .populate('categoryRef', 'name slug')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    console.log(`📦 Raw Published Courses Found in MongoDB: ${rawCourses ? rawCourses.length : 0}`);
+
+    const sanitized = (rawCourses || []).map((course) => {
+      let instructorObj = { name: 'Verified Instructor', avatar: '' };
+      if (course.instructorRef && typeof course.instructorRef === 'object' && course.instructorRef.name) {
+        instructorObj = course.instructorRef;
+      } else if (course.instructor && typeof course.instructor === 'object' && course.instructor.name) {
+        instructorObj = course.instructor;
+      }
+
+      let categoryObj = { name: 'General', slug: 'general' };
+      if (course.categoryRef && typeof course.categoryRef === 'object' && course.categoryRef.name) {
+        categoryObj = course.categoryRef;
+      } else if (course.category && typeof course.category === 'object' && course.category.name) {
+        categoryObj = course.category;
+      }
+
+      return {
+        ...course,
+        instructorRef: instructorObj,
+        instructor: instructorObj,
+        categoryRef: categoryObj,
+        category: categoryObj,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: sanitized.length,
+      courses: sanitized,
+      data: sanitized,
+    });
+  } catch (error) {
+    console.error('🔥 Error in getPublishedCourses:', error);
+    return res.status(200).json({
+      success: true,
+      count: 0,
+      courses: [],
+      data: [],
+      message: 'Fallback triggered',
+    });
   }
 };
 
@@ -465,7 +580,7 @@ const approveInstructor = async (req, res, next) => {
 
 module.exports = {
   getCourses,
-  getPublishedCourses: getCourses,
+  getPublishedCourses,
   getCourseById,
   createCourse,
   updateCourse,

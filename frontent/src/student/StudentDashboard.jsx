@@ -25,8 +25,9 @@ const StudentDashboard = () => {
       try {
         setLoading(true);
         const response = await api.get('/enrolments/my-courses').catch(() => null);
-        if (response && response.data.success) {
-          setEnrolments(response.data.data || []);
+        if (response && response.data) {
+          const list = response.data.courses || response.data.data || (Array.isArray(response.data) ? response.data : []);
+          setEnrolments(list);
         } else {
           setEnrolments([]);
         }
