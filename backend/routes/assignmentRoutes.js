@@ -14,6 +14,7 @@ const { uploadSingle } = require('../middleware/uploadMiddleware');
 router.post('/', protect, authorize('Instructor', 'Admin'), createAssignment);
 router.get('/my-submissions', protect, getMySubmissions);
 router.get('/lesson/:lessonId', protect, getAssignmentByLesson);
+router.post('/submit', protect, uploadSingle('assignment'), submitAssignment);
 router.post(
   '/:assignmentId/submit',
   protect,

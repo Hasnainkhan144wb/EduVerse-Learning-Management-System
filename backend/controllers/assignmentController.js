@@ -80,58 +80,83 @@ const getAssignmentByLesson = async (req, res, next) => {
 };
 
 // @desc    Submit assignment (file upload / file URL & notes)
-// @route   POST /api/assignments/:assignmentId/submit
+// @route   POST /api/assignments/submit OR POST /api/assignments/:assignmentId/submit
 // @access  Private (Student)
 const submitAssignment = async (req, res, next) => {
   try {
-    const { assignmentId } = req.params;
-    const { notes } = req.body;
     const studentId = req.user._id;
+    let assignmentId = req.params.assignmentId || req.body.assignmentId;
+    const { lessonId, courseId, solutionUrl, comments, notes } = req.body;
 
-    const assignment = await Assignment.findById(assignmentId);
-    if (!assignment) {
-      return res.status(404).json({ success: false, message: 'Assignment not found' });
-    }
-
-    // Determine file URL (from Multer upload file path or body URL)
-    let fileUrl = req.body.fileUrl;
+    let fileUrl = solutionUrl || req.body.fileUrl;
     if (req.file) {
       fileUrl = `/uploads/assignments/${req.file.filename}`;
     }
 
-    if (!fileUrl) {
+    const submissionNotes = comments || notes || '';
+
+    if (!fileUrl && !submissionNotes) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide or upload a submission file',
+        message: 'Please provide a solution link or assignment comments.',
       });
     }
 
-    // Check if submission already exists, update or create
+    let assignment = null;
+    if (assignmentId) {
+      assignment = await Assignment.findById(assignmentId);
+    }
+
+    if (!assignment && lessonId) {
+      assignment = await Assignment.findOne({ lessonId });
+      if (!assignment) {
+        // Auto-create assignment record for lesson if not exists
+        const lesson = await Lesson.findById(lessonId);
+        assignment = await Assignment.create({
+          lessonId,
+          title: lesson?.title || 'Assignment Task',
+          instructions: lesson?.description || lesson?.notes || 'Complete assignment submission.',
+          totalMarks: 100,
+        });
+      }
+    }
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assignment not found for this lesson.',
+      });
+    }
+
+    assignmentId = assignment._id;
+
+    // Upsert submission
     let submission = await Submission.findOne({ assignmentId, studentId });
 
     if (submission) {
-      submission.fileUrl = fileUrl;
-      submission.notes = notes || submission.notes;
+      submission.fileUrl = fileUrl || submission.fileUrl;
+      submission.notes = submissionNotes || submission.notes;
       submission.status = 'Submitted';
       await submission.save();
     } else {
       submission = await Submission.create({
         assignmentId,
         studentId,
-        fileUrl,
-        notes: notes || '',
+        fileUrl: fileUrl || '',
+        notes: submissionNotes,
         status: 'Submitted',
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: 'Assignment submitted successfully',
+      message: 'Assignment submitted successfully!',
+      submission,
       data: submission,
     });
   } catch (error) {
     if (typeof next === 'function') next(error);
-    else res.status(500).json({ success: false, message: error.message });
+    else return res.status(500).json({ success: false, message: error.message || 'Failed to submit assignment' });
   }
 };
 

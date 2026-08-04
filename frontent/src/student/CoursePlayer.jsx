@@ -57,7 +57,12 @@ const CoursePlayer = () => {
   const [quizResult, setQuizResult] = useState(null);
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
 
-  // Assignment Modal State
+  // Assignment Submission Modal State
+  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [documentUrl, setDocumentUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [assignmentData, setAssignmentData] = useState(null);
   const { register, handleSubmit, reset } = useForm();
@@ -108,6 +113,31 @@ const CoursePlayer = () => {
   useEffect(() => {
     fetchCourseDetails();
   }, [fetchCourseDetails]);
+
+  // Check assignment status when activeLesson changes
+  useEffect(() => {
+    if (activeLesson?.type?.toLowerCase() === 'assignment') {
+      const checkAssignmentStatus = async () => {
+        try {
+          const res = await api.get(`/assignments/lesson/${activeLesson._id}`);
+          if (res.data && res.data.success && res.data.data.submission) {
+            setIsSubmitted(true);
+            const sub = res.data.data.submission;
+            setDocumentUrl(sub.fileUrl || '');
+          } else {
+            setIsSubmitted(false);
+            setDocumentUrl('');
+            setSelectedFile(null);
+          }
+        } catch (err) {
+          setIsSubmitted(false);
+          setDocumentUrl('');
+          setSelectedFile(null);
+        }
+      };
+      checkAssignmentStatus();
+    }
+  }, [activeLesson]);
 
   // Fetch Q&A questions for this course
   const fetchLessonQnA = useCallback(async () => {
@@ -255,14 +285,41 @@ const CoursePlayer = () => {
 
   // Trigger Assignment Modal
   const handleOpenAssignment = async (lesson) => {
+    setShowSubmissionModal(true);
+  };
+
+  // Submit Assignment Handler (Form submission)
+  const handleAssignmentSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!activeLesson) return;
+
+    const targetUrl = documentUrl || (selectedFile ? selectedFile.name : '');
+    if (!targetUrl && !selectedFile) {
+      toast.error('Please attach a document file or enter a direct document link.');
+      return;
+    }
+
     try {
-      const response = await api.get(`/assignments/lesson/${lesson._id}`);
-      if (response.data.success) {
-        setAssignmentData(response.data.data.assignment);
-        setAssignmentModalOpen(true);
+      setUploading(true);
+      const response = await api.post('/assignments/submit', {
+        courseId,
+        lessonId: activeLesson._id,
+        solutionUrl: targetUrl,
+        fileUrl: targetUrl,
+        comments: selectedFile ? `Attached File: ${selectedFile.name}` : 'Document Link Submission',
+      });
+
+      if (response.data && response.data.success) {
+        toast.success('Assignment document submitted successfully! 🚀');
+        setIsSubmitted(true);
+        setShowSubmissionModal(false);
+        handleMarkLessonComplete(activeLesson._id);
       }
     } catch (err) {
-      toast.error('No assignment instructions available.');
+      console.error('Error submitting assignment:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit assignment document');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -377,7 +434,43 @@ const CoursePlayer = () => {
         <div className="lg:col-span-2 p-4 lg:p-6 space-y-6 overflow-y-auto border-r border-slate-800/80">
           {/* Media / Quiz Container */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-            {activeLesson?.type?.toLowerCase() === 'quiz' || activeLesson?.contentType?.toLowerCase() === 'quiz' ? (
+            {activeLesson?.type?.toLowerCase() === 'assignment' ? (
+              <div className="flex flex-col items-center justify-center p-6 md:p-10 text-center bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl min-h-[380px] space-y-4 w-full">
+                <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center text-3xl font-bold mx-auto shadow-inner">
+                  📝
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                    Assignment Project Task
+                  </span>
+                  <h3 className="text-2xl font-extrabold text-white mt-1">
+                    {activeLesson?.title || 'Assignment Task'}
+                  </h3>
+                </div>
+
+                <p className="text-slate-300 text-sm max-w-lg leading-relaxed bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                  {activeLesson?.description || activeLesson?.notes || 'This lesson contains an Assignment project. Submit your work below.'}
+                </p>
+
+                {(activeLesson?.attachmentUrl || activeLesson?.pdfUrl) && (
+                  <a
+                    href={activeLesson.attachmentUrl || activeLesson.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-4 py-2.5 rounded-xl transition-all shadow-md"
+                  >
+                    📥 Download Assignment Brief / Prompt ↗
+                  </a>
+                )}
+
+                <button
+                  onClick={() => setShowSubmissionModal(true)}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-extrabold px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-amber-600/30 flex items-center gap-2 text-sm"
+                >
+                  {isSubmitted ? '✔ Resubmit Assignment' : '📤 Submit Assignment'}
+                </button>
+              </div>
+            ) : activeLesson?.type?.toLowerCase() === 'quiz' || activeLesson?.contentType?.toLowerCase() === 'quiz' ? (
               <div className="w-full bg-slate-950 p-4 sm:p-6 min-h-[500px]">
                 <TakeQuiz
                   lessonId={activeLesson._id}
@@ -866,81 +959,94 @@ const CoursePlayer = () => {
         )}
       </AnimatePresence>
 
-      {/* ASSIGNMENT MODAL */}
+      {/* SUBMISSION MODAL */}
       <AnimatePresence>
-        {assignmentModalOpen && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        {showSubmissionModal && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6"
+              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative space-y-5"
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div>
-                  <span className="text-xs font-semibold text-amber-400 uppercase">
-                    Assignment Submission
-                  </span>
-                  <h2 className="text-xl font-bold text-white">{assignmentData?.title}</h2>
-                </div>
-                <button
-                  onClick={() => setAssignmentModalOpen(false)}
-                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
-                >
-                  <FiX className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                onClick={() => setShowSubmissionModal(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 p-2 rounded-xl transition font-bold"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
 
-              <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2 text-xs text-slate-300">
-                <p className="font-semibold text-white">Instructions:</p>
-                <p>{assignmentData?.instructions}</p>
-                <p className="text-amber-400 font-semibold mt-2">
-                  Total Marks: {assignmentData?.totalMarks}
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                  Submit Solution
+                </span>
+                <h2 className="text-xl font-extrabold text-white mt-1">Submit Assignment Document</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Upload your completed assignment file (PDF, DOCX, ZIP).
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmitAssignment)} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Upload Submission File (PDF / Doc / Zip)
-                  </label>
+              <form onSubmit={handleAssignmentSubmit} className="space-y-4">
+                {/* FILE UPLOAD DROPZONE */}
+                <div className="border-2 border-dashed border-slate-700 hover:border-amber-500 rounded-2xl p-6 text-center bg-slate-950 hover:bg-amber-500/5 transition-all cursor-pointer relative">
                   <input
                     type="file"
-                    {...register('file')}
-                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-amber-500"
+                    accept=".pdf,.doc,.docx,.zip,.rar"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setDocumentUrl(reader.result);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
+                  <div className="flex flex-col items-center">
+                    <span className="text-3xl mb-2">📁</span>
+                    <p className="text-sm font-semibold text-slate-200">
+                      {selectedFile ? selectedFile.name : 'Click or Drag document here'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Supports PDF, Word Documents (.docx), or ZIP archives (Max 20MB)
+                    </p>
+                  </div>
                 </div>
 
+                {/* DIRECT DOCUMENT LINK FALLBACK */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Or Provide Submission File URL
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Or Direct File / Drive Link *
                   </label>
                   <input
                     type="url"
-                    placeholder="https://drive.google.com/... or GitHub URL"
-                    {...register('fileUrl')}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                    placeholder="https://.../my-assignment.pdf"
+                    value={documentUrl}
+                    onChange={(e) => setDocumentUrl(e.target.value)}
+                    className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Notes / Comments for Instructor
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Provide any additional comments or context..."
-                    {...register('notes')}
-                    className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-amber-500"
-                  />
+                {/* SUBMIT BUTTONS */}
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-800/80">
+                  <button
+                    type="button"
+                    onClick={() => setShowSubmissionModal(false)}
+                    className="px-5 py-2.5 text-xs font-bold text-slate-300 bg-slate-800 rounded-xl hover:bg-slate-700 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!selectedFile && !documentUrl}
+                    className="px-6 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 disabled:opacity-40 rounded-xl shadow-lg shadow-amber-600/30 transition flex items-center gap-2"
+                  >
+                    <FiSend /> {uploading ? 'Uploading...' : 'Confirm Submission'}
+                  </button>
                 </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-amber-600/30 transition flex items-center justify-center gap-2"
-                >
-                  <FiSend /> Submit Assignment
-                </button>
               </form>
             </motion.div>
           </div>
