@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -12,13 +13,15 @@ import {
   FiUser,
   FiArrowLeft,
   FiArrowRight,
-  FiLock,
   FiAward,
   FiGlobe,
-  FiDollarSign,
   FiChevronDown,
   FiChevronUp,
   FiBookmark,
+  FiEdit3,
+  FiTrash2,
+  FiMessageSquare,
+  FiAlertCircle,
 } from 'react-icons/fi';
 
 const CourseDetails = () => {
@@ -32,39 +35,79 @@ const CourseDetails = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
 
-  useEffect(() => {
-    const fetchCourseDetails = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get(`/courses/${courseId}`);
-        if (response.data.success) {
-          const courseData = response.data.data;
-          setCourse(courseData);
+  // Review System State
+  const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [ratingBreakdown, setRatingBreakdown] = useState({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
+  const [userReview, setUserReview] = useState(null);
+  const [isEditingReview, setIsEditingReview] = useState(false);
 
-          if (user && courseId) {
-            const watchlist = user.watchlist || user.wishlist || [];
-            const inWatchlist = watchlist.some(
-              (item) => String(item._id || item) === String(courseId)
-            );
-            setIsBookmarked(inWatchlist);
-          }
+  // Review Form Inputs
+  const [ratingInput, setRatingInput] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [commentInput, setCommentInput] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
-          // Expand all sections by default
-          const initExp = {};
-          (courseData.sections || []).forEach((sec) => {
-            initExp[sec._id] = true;
-          });
-          setExpandedSections(initExp);
+  // 1. Fetch Course & Enrolment Data
+  const fetchCourseData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/courses/${courseId}`);
+      if (response.data.success) {
+        const courseData = response.data.data;
+        setCourse(courseData);
+
+        if (user && courseId) {
+          const watchlist = user.watchlist || user.wishlist || [];
+          const inWatchlist = watchlist.some(
+            (item) => String(item._id || item) === String(courseId)
+          );
+          setIsBookmarked(inWatchlist);
         }
-      } catch (err) {
-        console.error('Error fetching course details:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchCourseDetails();
+        // Expand sections by default
+        const initExp = {};
+        (courseData.sections || []).forEach((sec) => {
+          initExp[sec._id] = true;
+        });
+        setExpandedSections(initExp);
+      }
+    } catch (err) {
+      console.error('Error fetching course details:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [courseId, user]);
+
+  // 2. Fetch Reviews & Enrollment Status
+  const fetchReviewsData = useCallback(async () => {
+    try {
+      const res = await api.get(`/reviews/course/${courseId}`);
+      if (res.data && res.data.success) {
+        setReviews(res.data.reviews || res.data.data || []);
+        setAverageRating(res.data.averageRating || 0);
+        setTotalReviews(res.data.totalReviews || 0);
+        setRatingBreakdown(res.data.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
+        setIsEnrolled(!!res.data.isEnrolled);
+
+        if (res.data.userReview) {
+          setUserReview(res.data.userReview);
+          setRatingInput(res.data.userReview.rating || 5);
+          setCommentInput(res.data.userReview.comment || res.data.userReview.review || '');
+        } else {
+          setUserReview(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+    }
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchCourseData();
+    fetchReviewsData();
+  }, [fetchCourseData, fetchReviewsData]);
 
   const toggleSection = (sectionId) => {
     setExpandedSections((prev) => ({
@@ -73,9 +116,80 @@ const CourseDetails = () => {
     }));
   };
 
+  // Submit / Create Review Handler
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!ratingInput) {
+      toast.error('Please select a star rating (1-5).');
+      return;
+    }
+    if (!commentInput.trim()) {
+      toast.error('Please write a review comment.');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+
+      if (userReview && isEditingReview) {
+        // Update Review
+        const res = await api.put(`/reviews/${userReview._id}`, {
+          rating: Number(ratingInput),
+          comment: commentInput.trim(),
+        });
+        if (res.data && res.data.success) {
+          toast.success('Review updated successfully!');
+          setIsEditingReview(false);
+          fetchReviewsData();
+          fetchCourseData();
+        }
+      } else {
+        // Create Review
+        const res = await api.post('/reviews', {
+          courseId,
+          rating: Number(ratingInput),
+          comment: commentInput.trim(),
+        });
+        if (res.data && res.data.success) {
+          toast.success('Review submitted successfully!');
+          fetchReviewsData();
+          fetchCourseData();
+        }
+      }
+    } catch (err) {
+      console.error('Review submit error:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit review.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  // Delete Review Handler
+  const handleReviewDelete = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+
+    try {
+      const res = await api.delete(`/reviews/${reviewId}`);
+      if (res.data && res.data.success) {
+        toast.success('Review deleted successfully!');
+        if (userReview && userReview._id === reviewId) {
+          setUserReview(null);
+          setIsEditingReview(false);
+          setRatingInput(5);
+          setCommentInput('');
+        }
+        fetchReviewsData();
+        fetchCourseData();
+      }
+    } catch (err) {
+      console.error('Review delete error:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete review.');
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-400 text-sm font-medium">Loading Course Details...</p>
@@ -143,21 +257,38 @@ const CourseDetails = () => {
               {course.description}
             </p>
 
-            <div className="flex items-center gap-6 pt-2 text-xs text-slate-300">
-              <div className="flex items-center gap-1 text-amber-400 font-bold">
-                <FiStar className="fill-amber-400" />
-                <span>4.9 (128 reviews)</span>
+            <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-slate-300">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                <div className="flex items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FiStar
+                      key={star}
+                      className={`w-4 h-4 ${
+                        star <= Math.round(averageRating || course.averageRating || 4.8)
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-slate-600'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-white font-extrabold text-sm ml-1">
+                  {averageRating || course.averageRating || 4.8}
+                </span>
+                <span className="text-slate-400 font-medium">
+                  ({totalReviews || course.totalReviews || reviews.length || 0} reviews)
+                </span>
               </div>
-              <div className="flex items-center gap-1 text-slate-400">
+
+              <div className="flex items-center gap-1.5 text-slate-400">
                 <FiUser className="text-indigo-400" />
-                <span>Instructor: {course.instructorRef?.name || 'EduVerse Instructor'}</span>
+                <span>Instructor: {course.instructorRef?.name || 'EduVerse Faculty'}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* MAIN CONTENT BODY & STICKY CHECKOUT CARD */}
+      {/* MAIN CONTENT BODY & STICKY CTA CARD */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column Details */}
         <div className="lg:col-span-2 space-y-10">
@@ -192,7 +323,7 @@ const CourseDetails = () => {
             <div className="space-y-3">
               {(course.sections || []).map((section, sIdx) => (
                 <div
-                  key={section._id}
+                  key={section._id || sIdx}
                   className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden"
                 >
                   <button
@@ -232,6 +363,279 @@ const CourseDetails = () => {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* COURSE RATING & REVIEW SYSTEM SECTION */}
+          <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl space-y-8 shadow-2xl">
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+                Student Feedback & Ratings
+              </span>
+              <h2 className="text-2xl font-extrabold text-white mt-2">Course Reviews</h2>
+            </div>
+
+            {/* OVERALL RATING & BREAKDOWN GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center bg-slate-950 p-6 rounded-2xl border border-slate-800">
+              {/* Average Score Box */}
+              <div className="flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-slate-800 pb-6 md:pb-0 md:pr-6">
+                <span className="text-5xl font-black text-white">{averageRating || '0.0'}</span>
+                <div className="flex items-center my-2 text-amber-400">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FiStar
+                      key={star}
+                      className={`w-5 h-5 ${
+                        star <= Math.round(averageRating)
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-slate-700'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-slate-400 font-semibold">
+                  Course Rating • {totalReviews} {totalReviews === 1 ? 'Review' : 'Reviews'}
+                </span>
+              </div>
+
+              {/* Star Rating Distribution Bars */}
+              <div className="md:col-span-2 space-y-2">
+                {[5, 4, 3, 2, 1].map((stars) => {
+                  const count = ratingBreakdown[stars] || 0;
+                  const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
+                  return (
+                    <div key={stars} className="flex items-center gap-3 text-xs">
+                      <span className="w-12 font-bold text-slate-300 flex items-center gap-1">
+                        {stars} <FiStar className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      </span>
+                      <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-indigo-500 rounded-full transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-slate-400 font-medium">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* REVIEW SUBMISSION FORM / USER REVIEW CARD */}
+            <div className="border-t border-slate-800 pt-6">
+              {!user ? (
+                <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl text-center space-y-2">
+                  <FiAlertCircle className="w-6 h-6 text-amber-400 mx-auto" />
+                  <p className="text-slate-300 text-xs font-semibold">
+                    Please log in as an enrolled student to rate and review this course.
+                  </p>
+                  <Link
+                    to="/login"
+                    className="inline-block px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition"
+                  >
+                    Log In to Review
+                  </Link>
+                </div>
+              ) : user.role === 'Instructor' ? (
+                <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl text-slate-400 text-xs font-semibold flex items-center gap-2">
+                  <FiAlertCircle className="text-indigo-400 shrink-0 w-5 h-5" />
+                  <span>
+                    Instructors can view student ratings and statistics for their courses but cannot submit or modify student reviews.
+                  </span>
+                </div>
+              ) : !isEnrolled && user.role !== 'Admin' ? (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                  <FiAlertCircle className="shrink-0 w-5 h-5" />
+                  <span>Only enrolled students can rate and review this course.</span>
+                </div>
+              ) : userReview && !isEditingReview ? (
+                <div className="bg-slate-950 border border-indigo-500/30 p-5 rounded-2xl space-y-3 relative">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+                      Your Submitted Review
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsEditingReview(true)}
+                        className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+                      >
+                        <FiEdit3 /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleReviewDelete(userReview._id)}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+                      >
+                        <FiTrash2 /> Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex text-amber-400">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <FiStar
+                          key={s}
+                          className={`w-4 h-4 ${
+                            s <= userReview.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs font-bold text-white">{userReview.rating}.0 / 5.0</span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                    {userReview.comment || userReview.review}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-semibold">
+                    Reviewed on {new Date(userReview.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              ) : (
+                /* REVIEW FORM (Create or Edit) */
+                <form onSubmit={handleReviewSubmit} className="bg-slate-950 border border-slate-800 p-6 rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-white">
+                      {isEditingReview ? 'Edit Your Review' : 'Rate & Write a Review'}
+                    </h3>
+                    {isEditingReview && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingReview(false)}
+                        className="text-xs text-slate-400 hover:text-white underline"
+                      >
+                        Cancel Editing
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Star Rating Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-2">
+                      Select Rating (1 to 5 Stars):
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          onClick={() => setRatingInput(star)}
+                          className="p-1 transition-transform hover:scale-125 focus:outline-none"
+                        >
+                          <FiStar
+                            className={`w-7 h-7 ${
+                              star <= (hoverRating || ratingInput)
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'text-slate-700'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-2 text-xs font-bold text-amber-400">
+                        {hoverRating || ratingInput} Star{(hoverRating || ratingInput) > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Comment Textarea */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Your Review Feedback:
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={commentInput}
+                      onChange={(e) => setCommentInput(e.target.value)}
+                      placeholder="Share your experience with this course, instructor teaching style, and material quality..."
+                      className="w-full bg-slate-900 border border-slate-800 text-white text-xs rounded-xl p-3.5 focus:outline-none focus:border-indigo-500 transition"
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-indigo-600/30 transition disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {submittingReview
+                        ? 'Submitting...'
+                        : isEditingReview
+                        ? 'Update Review ✓'
+                        : 'Submit Review ✓'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* REVIEWS LIST */}
+            <div className="space-y-4 border-t border-slate-800 pt-6">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <FiMessageSquare className="text-indigo-400" /> Student Reviews ({reviews.length})
+              </h3>
+
+              {reviews.length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-4 text-center bg-slate-950 rounded-2xl border border-slate-800">
+                  No reviews submitted yet for this course. Be the first enrolled student to review!
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map((rev) => {
+                    const studentObj = rev.studentId || rev.student || {};
+                    const isOwner = user && String(studentObj._id || rev.studentId) === String(user._id);
+                    const isAdmin = user && user.role === 'Admin';
+
+                    return (
+                      <div
+                        key={rev._id}
+                        className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2 transition hover:border-slate-700"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-sm">
+                              {studentObj.name?.charAt(0) || 'S'}
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-white">{studentObj.name || 'Anonymous Student'}</h4>
+                              <p className="text-[10px] text-slate-400">
+                                {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Verified Review'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <div className="flex text-amber-400 text-xs">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <FiStar
+                                  key={star}
+                                  className={`w-3.5 h-3.5 ${
+                                    star <= rev.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-700'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+
+                            {(isOwner || isAdmin) && (
+                              <button
+                                onClick={() => handleReviewDelete(rev._id)}
+                                className="text-red-400 hover:text-red-300 text-xs p-1 rounded hover:bg-red-500/10 transition"
+                                title={isAdmin ? 'Delete Review (Admin Moderation)' : 'Delete Your Review'}
+                              >
+                                <FiTrash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-300 leading-relaxed pt-1">
+                          {rev.comment || rev.review}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

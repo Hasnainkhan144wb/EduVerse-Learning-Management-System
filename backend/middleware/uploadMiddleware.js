@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
       cb(null, file.fieldname === 'avatar' ? avatarsDir : thumbnailsDir);
     } else if (file.fieldname === 'pdf' || file.fieldname === 'document') {
       cb(null, pdfsDir);
-    } else if (file.fieldname === 'assignment' || file.fieldname === 'submission') {
+    } else if (file.fieldname === 'assignment' || file.fieldname === 'submission' || file.fieldname === 'file') {
       cb(null, assignmentsDir);
     } else {
       cb(null, uploadBaseDir);

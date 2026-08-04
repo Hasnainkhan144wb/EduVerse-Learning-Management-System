@@ -85,9 +85,12 @@ const CourseCard = ({ course, onWatchlistToggle }) => {
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-          <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
-            <FiStar className="fill-amber-400" />
-            <span>{course.rating || 5.0}</span>
+          <div className="flex items-center gap-1.5 text-amber-400 text-xs font-bold">
+            <FiStar className="fill-amber-400 text-amber-400" />
+            <span>{(course.averageRating !== undefined && course.averageRating !== null && course.averageRating > 0) ? course.averageRating : (course.rating || '4.8')}</span>
+            <span className="text-slate-400 text-[11px] font-normal">
+              ({course.totalReviews !== undefined ? course.totalReviews : (course.reviewsCount || 0)} Reviews)
+            </span>
           </div>
           <div className="text-emerald-400 font-extrabold text-sm">
             {course.price === 0 ? 'Free' : `$${course.price || 49.99}`}
