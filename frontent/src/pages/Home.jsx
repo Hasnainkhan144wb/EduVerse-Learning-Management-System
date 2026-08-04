@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import Footer from '../components/Footer';
 import SearchBar from '../components/SearchBar';
+import HeroFeaturedCarousel from '../components/HeroFeaturedCarousel';
 import { getFileUrl } from '../utils/getFileUrl';
 import {
   FiBookOpen,
@@ -204,60 +205,8 @@ const Home = () => {
               </div>
             </motion.div>
 
-            {/* Right Visual Card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="relative mx-auto max-w-md lg:max-w-none rounded-3xl p-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-2xl shadow-indigo-500/20">
-                <div className="bg-slate-900 rounded-[22px] p-6 space-y-6">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
-                        EV
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-white">Full-Stack MERN Mastery</h4>
-                        <p className="text-xs text-slate-400">Featured Academy Course</p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase">
-                      Enrolling Now
-                    </span>
-                  </div>
-
-                  <div className="h-48 rounded-2xl overflow-hidden relative">
-                    <img
-                      src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80"
-                      alt="Coding Course"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-xl">
-                        ▶
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                      <span className="block font-bold text-white">24</span>
-                      <span className="text-[10px] text-slate-400">Lessons</span>
-                    </div>
-                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                      <span className="block font-bold text-white">4.9 ★</span>
-                      <span className="text-[10px] text-slate-400">Rating</span>
-                    </div>
-                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                      <span className="block font-bold text-emerald-400">$49.99</span>
-                      <span className="text-[10px] text-slate-400">Price</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            {/* Dynamic Featured Course Auto-Rotating Carousel */}
+            <HeroFeaturedCarousel />
           </div>
         </div>
       </section>
