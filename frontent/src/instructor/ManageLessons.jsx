@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { getEmbedUrl } from '../utils/videoEmbed';
 import {
   FiPlus,
   FiEdit,
@@ -25,6 +26,7 @@ const ManageLessons = () => {
   const [course, setCourse] = useState(null);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activePreview, setActivePreview] = useState(null);
 
   // Section Modal State
   const [sectionModalOpen, setSectionModalOpen] = useState(false);
@@ -359,11 +361,12 @@ const ManageLessons = () => {
                     section.lessons.map((lesson) => (
                       <div
                         key={lesson._id}
-                        className="p-4 flex items-center justify-between hover:bg-slate-800/40 rounded-2xl transition"
+                        onClick={() => setActivePreview(lesson)}
+                        className="p-4 flex items-center justify-between hover:bg-slate-800/60 cursor-pointer rounded-2xl transition border border-transparent hover:border-indigo-500/40"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-slate-800 text-indigo-400 flex items-center justify-center text-xl">
-                            {lesson.type === 'pdf' ? (
+                            {lesson.type === 'pdf' || lesson.pdfUrl ? (
                               <FiFileText />
                             ) : lesson.type === 'quiz' ? (
                               <FiHelpCircle />
@@ -375,10 +378,15 @@ const ManageLessons = () => {
                             <h4 className="text-sm font-semibold text-white">{lesson.title}</h4>
                             <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
                               <span className="uppercase text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full">
-                                {lesson.type}
+                                {lesson.type || 'content'}
                               </span>
-                              {lesson.videoUrl && <span>Video Stream Configured</span>}
-                              {lesson.pdfUrl && <span className="text-emerald-400 font-medium">✓ PDF Document Attached</span>}
+                              {(lesson.videoUrl || lesson.url || lesson.contentUrl) && (
+                                <span className="text-indigo-300">🎥 Video Stream Configured</span>
+                              )}
+                              {(lesson.pdfUrl || lesson.documentUrl || lesson.fileUrl) && (
+                                <span className="text-emerald-400 font-medium">📄 PDF Document Attached</span>
+                              )}
+                              <span className="text-slate-500 text-[11px]">Click to preview</span>
                             </div>
                           </div>
                         </div>
@@ -387,6 +395,7 @@ const ManageLessons = () => {
                           {lesson.type === 'quiz' && (
                             <Link
                               to={`/instructor/quizzes/create/${lesson._id}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition"
                             >
                               <FiHelpCircle /> Configure Quiz
@@ -395,20 +404,27 @@ const ManageLessons = () => {
                           {lesson.type === 'assignment' && (
                             <Link
                               to={`/instructor/assignments/manage/${lesson._id}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="px-3 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition"
                             >
                               <FiFileText /> Configure Assignment
                             </Link>
                           )}
                           <button
-                            onClick={() => handleOpenEditLesson(lesson)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditLesson(lesson);
+                            }}
                             className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition"
                             title="Edit Lesson"
                           >
                             <FiEdit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteLesson(lesson._id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteLesson(lesson._id);
+                            }}
                             className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition"
                             title="Delete Lesson"
                           >
@@ -655,6 +671,112 @@ const ManageLessons = () => {
                   Save Lesson Module
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* FAIL-SAFE UNIVERSAL PREVIEW MODAL */}
+      <AnimatePresence>
+        {activePreview && (
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4"
+            onClick={() => setActivePreview(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Action */}
+              <button
+                onClick={() => setActivePreview(null)}
+                className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition"
+              >
+                ✕
+              </button>
+
+              <div className="mb-4 pr-10">
+                <span className="text-xs font-bold px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md uppercase">
+                  {activePreview.type || 'Lesson Content'}
+                </span>
+                <h2 className="text-2xl font-bold text-white mt-2">{activePreview.title}</h2>
+              </div>
+
+              {/* VIDEO PREVIEW */}
+              {(activePreview.type?.toLowerCase() === 'video' || activePreview.videoUrl || activePreview.url || activePreview.contentUrl) && (
+                <div className="aspect-video w-full bg-slate-950 rounded-xl overflow-hidden shadow-inner mb-4 border border-slate-800">
+                  {(activePreview.videoUrl || activePreview.url || activePreview.contentUrl) ? (
+                    <iframe
+                      src={getEmbedUrl(activePreview.videoUrl || activePreview.url || activePreview.contentUrl)}
+                      title={activePreview.title}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                      <FiVideo className="text-4xl mb-2 text-indigo-400" />
+                      <p className="text-sm font-medium">No video stream URL attached to this lesson module.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* DOCUMENT PREVIEW */}
+              {(activePreview.type?.toLowerCase() === 'pdf' || activePreview.type?.toLowerCase() === 'document' || activePreview.pdfUrl || activePreview.documentUrl || activePreview.fileUrl) && (
+                <div className="border border-slate-800 rounded-xl p-6 bg-slate-950 text-center mb-4">
+                  <p className="text-slate-300 font-medium mb-3 flex items-center justify-center gap-2">
+                    <FiFileText className="text-emerald-400" /> Attached Document
+                  </p>
+                  {(activePreview.pdfUrl || activePreview.documentUrl || activePreview.fileUrl) ? (
+                    <div className="space-y-4">
+                      <a
+                        href={activePreview.pdfUrl || activePreview.documentUrl || activePreview.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-indigo-600/30"
+                      >
+                        Open Document ↗
+                      </a>
+                      {((activePreview.pdfUrl || activePreview.documentUrl || activePreview.fileUrl)?.startsWith('data:application/pdf') || (activePreview.pdfUrl || activePreview.documentUrl || activePreview.fileUrl)?.endsWith('.pdf')) && (
+                        <iframe
+                          src={activePreview.pdfUrl || activePreview.documentUrl || activePreview.fileUrl}
+                          className="w-full h-96 mt-4 rounded-xl border border-slate-800 bg-white"
+                          title="PDF Document Preview"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-sm">No PDF document attached to this reading lesson.</p>
+                  )}
+                </div>
+              )}
+
+              {/* DESCRIPTION / NOTES */}
+              {(activePreview.description || activePreview.notes) && (
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                  <p className="text-xs font-semibold text-indigo-400 uppercase mb-1">Description / Notes</p>
+                  <p className="text-sm text-slate-300 whitespace-pre-line">{activePreview.description || activePreview.notes}</p>
+                </div>
+              )}
+
+              {/* SOURCE CODE RESOURCE */}
+              {activePreview.sourceCode && (
+                <div className="mt-3 bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-medium">Downloadable Resource / Source Code</span>
+                  <a
+                    href={activePreview.sourceCode}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 underline"
+                  >
+                    Access Resource ↗
+                  </a>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

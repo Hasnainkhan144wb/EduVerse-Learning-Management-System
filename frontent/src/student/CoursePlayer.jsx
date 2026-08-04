@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { getEmbedUrl } from '../utils/videoEmbed';
 import {
   FiPlayCircle,
   FiFileText,
@@ -377,17 +378,18 @@ const CoursePlayer = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
             <div className="relative aspect-video bg-black flex items-center justify-center">
               {activeLesson?.type === 'video' && activeLesson?.videoUrl ? (
-                activeLesson.videoUrl.includes('youtube') || activeLesson.videoUrl.includes('vimeo') ? (
+                activeLesson.videoUrl.includes('youtube') || activeLesson.videoUrl.includes('vimeo') || activeLesson.videoUrl.includes('youtu.be') ? (
                   <iframe
-                    src={activeLesson.videoUrl}
-                    title={activeLesson.title}
+                    src={getEmbedUrl(activeLesson.videoUrl)}
+                    title={activeLesson?.title || 'Lesson Video'}
                     className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   />
                 ) : (
                   <video
                     ref={videoRef}
-                    src={activeLesson.videoUrl}
+                    src={getEmbedUrl(activeLesson.videoUrl)}
                     controls
                     onEnded={handleVideoEnded}
                     className="w-full h-full object-contain"
