@@ -71,15 +71,17 @@ const ManageAssignments = () => {
       try {
         const response = await api.get(`/courses/${selectedCourseId}`);
         if (response.data.success) {
-          const allLessons = [];
+          const assignmentLessons = [];
           (response.data.data.sections || []).forEach((sec) => {
             (sec.lessons || []).forEach((les) => {
-              allLessons.push(les);
+              if (les.type === 'assignment') {
+                assignmentLessons.push(les);
+              }
             });
           });
-          setLessons(allLessons);
-          if (allLessons.length > 0 && !lessonId) {
-            setLessonId(allLessons[0]._id);
+          setLessons(assignmentLessons);
+          if (assignmentLessons.length > 0 && !lessonId) {
+            setLessonId(assignmentLessons[0]._id);
           }
         }
       } catch (err) {
@@ -92,6 +94,15 @@ const ManageAssignments = () => {
   // Fetch assignment & student submissions when lesson selected
   const fetchAssignmentData = useCallback(async () => {
     if (!lessonId) return;
+
+    // Type check safety: Do NOT call assignment API if target lesson is a Quiz!
+    const targetLes = lessons.find((l) => String(l._id) === String(lessonId));
+    if (targetLes && targetLes.type !== 'assignment') {
+      setAssignment(null);
+      setSubmissions([]);
+      return;
+    }
+
     try {
       setLoadingSubmissions(true);
       const res = await api.get(`/assignments/lesson/${lessonId}`).catch(() => null);

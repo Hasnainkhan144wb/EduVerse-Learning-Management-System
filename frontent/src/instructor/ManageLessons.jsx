@@ -22,6 +22,7 @@ import {
 
 const ManageLessons = () => {
   const { courseId } = useParams();
+  const navigate = useNavigate();
 
   const [course, setCourse] = useState(null);
   const [sections, setSections] = useState([]);
@@ -197,10 +198,12 @@ const ManageLessons = () => {
     }
 
     try {
+      let savedLessonId = null;
       if (editingLesson) {
         const response = await api.put(`/courses/lessons/${editingLesson._id}`, lessonForm);
         if (response.data && response.data.success) {
           toast.success('Lesson updated successfully!');
+          savedLessonId = editingLesson._id;
           fetchCourseCurriculum();
         }
       } else {
@@ -210,10 +213,16 @@ const ManageLessons = () => {
         );
         if (response.data && response.data.success) {
           toast.success('Lesson added to section! 🚀');
+          savedLessonId = response.data.data?._id;
           fetchCourseCurriculum();
         }
       }
       setLessonModalOpen(false);
+
+      if (lessonForm.type === 'quiz' && savedLessonId) {
+        toast.success('Launching Interactive Quiz Builder... 🎯');
+        navigate(`/instructor/quizzes/create/${savedLessonId}`);
+      }
     } catch (err) {
       toast.error('Failed to save lesson');
     }
@@ -550,6 +559,32 @@ const ManageLessons = () => {
                     <option value="assignment">Assignment Task</option>
                   </select>
                 </div>
+
+                {lessonForm.type === 'quiz' && (
+                  <div className="p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl space-y-2">
+                    <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
+                      <FiHelpCircle className="text-lg shrink-0" />
+                      <span>Interactive Quiz Assessment Selected</span>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      Saving this module as an Interactive Quiz will open the Quiz Builder where you can create questions, set passing percentage thresholds, time limits, and attempt caps.
+                    </p>
+                    {editingLesson && (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLessonModalOpen(false);
+                            navigate(`/instructor/quizzes/create/${editingLesson._id}`);
+                          }}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition"
+                        >
+                          <FiHelpCircle /> Open Quiz Question Builder ↗
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {lessonForm.type === 'video' && (
                   <div>

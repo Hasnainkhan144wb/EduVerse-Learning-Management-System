@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import { getEmbedUrl } from '../utils/videoEmbed';
+import TakeQuiz from './TakeQuiz';
 import {
   FiPlayCircle,
   FiFileText,
@@ -377,7 +378,14 @@ const CoursePlayer = () => {
           {/* Media Container */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
             <div className="relative aspect-video bg-black flex items-center justify-center">
-              {activeLesson?.type === 'video' && activeLesson?.videoUrl ? (
+              {activeLesson?.type === 'quiz' ? (
+                <div className="w-full bg-slate-950 p-2 sm:p-4 overflow-y-auto max-h-[80vh]">
+                  <TakeQuiz
+                    lessonId={activeLesson._id}
+                    onQuizCompleted={fetchCourseAndEnrolmentDetails}
+                  />
+                </div>
+              ) : activeLesson?.type === 'video' && activeLesson?.videoUrl ? (
                 activeLesson.videoUrl.includes('youtube') || activeLesson.videoUrl.includes('vimeo') || activeLesson.videoUrl.includes('youtu.be') ? (
                   <iframe
                     src={getEmbedUrl(activeLesson.videoUrl)}
@@ -404,21 +412,10 @@ const CoursePlayer = () => {
                     {activeLesson?.title || 'Select a lesson'}
                   </h3>
                   <p className="text-xs text-slate-400 max-w-sm">
-                    {activeLesson?.type === 'quiz'
-                      ? 'This lesson is an interactive Quiz. Click below to start your attempt.'
-                      : activeLesson?.type === 'assignment'
+                    {activeLesson?.type === 'assignment'
                       ? 'This lesson contains an Assignment project. Submit your work below.'
                       : 'Interactive media module ready for review.'}
                   </p>
-
-                  {activeLesson?.type === 'quiz' && (
-                    <button
-                      onClick={() => handleOpenQuiz(activeLesson)}
-                      className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-purple-600/30 transition"
-                    >
-                      Start Quiz Attempt
-                    </button>
-                  )}
 
                   {activeLesson?.type === 'assignment' && (
                     <button
