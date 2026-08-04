@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import { getEmbedUrl } from '../utils/videoEmbed';
+import { getFileUrl } from '../utils/getFileUrl';
 import TakeQuiz from './TakeQuiz';
 import {
   FiPlayCircle,
@@ -544,6 +545,54 @@ const CoursePlayer = () => {
                   lessonId={activeLesson._id}
                   onQuizCompleted={fetchCourseDetails}
                 />
+              </div>
+            ) : activeLesson?.type?.toLowerCase() === 'pdf' || activeLesson?.type?.toLowerCase() === 'document' || activeLesson?.pdfUrl || activeLesson?.attachmentUrl ? (
+              <div className="w-full flex flex-col items-center justify-center bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-3xl min-h-[550px] shadow-2xl">
+                {/* Document Top Bar with Download Option */}
+                <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-950 p-4 rounded-2xl mb-4 border border-slate-800 gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">📄</span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{activeLesson?.title || 'Document Lesson'}</h4>
+                      <p className="text-xs text-slate-400">Interactive Reading Material</p>
+                    </div>
+                  </div>
+
+                  {/* Download Link */}
+                  {(activeLesson?.pdfUrl || activeLesson?.attachmentUrl || activeLesson?.url) && (
+                    <a
+                      href={getFileUrl(activeLesson.pdfUrl || activeLesson.attachmentUrl || activeLesson.url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 shrink-0 cursor-pointer"
+                    >
+                      📥 Open / Download PDF ↗
+                    </a>
+                  )}
+                </div>
+
+                {/* EMBEDDED PDF IFRAME VIEWER */}
+                {(activeLesson?.pdfUrl || activeLesson?.attachmentUrl || activeLesson?.url) ? (
+                  <div className="w-full h-[550px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 relative shadow-inner">
+                    <iframe
+                      src={`${getFileUrl(activeLesson.pdfUrl || activeLesson.attachmentUrl || activeLesson.url)}#toolbar=1`}
+                      title={activeLesson?.title || 'Lesson Document'}
+                      className="w-full h-full border-0"
+                    />
+                  </div>
+                ) : (
+                  /* Fallback if no document file uploaded */
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl font-bold mb-3">
+                      📄
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-1">{activeLesson?.title}</h3>
+                    <p className="text-xs text-slate-400 max-w-sm">
+                      {activeLesson?.description || activeLesson?.notes || 'No attached document file was provided for this lesson.'}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="relative aspect-video bg-black flex items-center justify-center">
