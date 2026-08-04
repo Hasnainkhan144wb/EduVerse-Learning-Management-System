@@ -15,6 +15,7 @@ import {
   FiPlay,
   FiSend,
   FiAlertTriangle,
+  FiGrid,
 } from 'react-icons/fi';
 
 const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted }) => {
@@ -24,6 +25,7 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
 
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [quizStarted, setQuizStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
@@ -40,6 +42,7 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
   const fetchQuizDetails = async () => {
     try {
       setLoading(true);
+      setErrorMessage('');
       let response;
       if (quizId) {
         response = await api.get(`/quizzes/${quizId}`);
@@ -51,13 +54,32 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
         const qData = response.data.data;
         setQuiz(qData);
 
+        // Restore draft answers from localStorage if present
+        if (qData._id) {
+          const draftKey = `quiz_draft_${qData._id}`;
+          const savedDraft = localStorage.getItem(draftKey);
+          if (savedDraft) {
+            try {
+              setSelectedAnswers(JSON.parse(savedDraft));
+            } catch (e) {
+              console.error('Failed to parse saved draft answers');
+            }
+          }
+        }
+
         if (qData.timeLimit && qData.timeLimit > 0) {
           setTimeLeftSeconds(qData.timeLimit * 60);
         }
+      } else {
+        setQuiz(null);
+        setErrorMessage('No quiz has been created for this lesson yet.');
       }
     } catch (err) {
       console.error('Error fetching quiz details:', err);
-      toast.error(err.response?.data?.message || 'Failed to load quiz details');
+      setQuiz(null);
+      setErrorMessage(
+        err.response?.data?.message || 'No quiz has been created for this lesson yet.'
+      );
     } finally {
       setLoading(false);
     }
@@ -66,6 +88,13 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
   useEffect(() => {
     fetchQuizDetails();
   }, [quizId, propLessonId]);
+
+  // Save draft answers to localStorage on change
+  useEffect(() => {
+    if (quiz && quiz._id && Object.keys(selectedAnswers).length > 0 && !quizResult) {
+      localStorage.setItem(`quiz_draft_${quiz._id}`, JSON.stringify(selectedAnswers));
+    }
+  }, [selectedAnswers, quiz, quizResult]);
 
   // Timer tick effect
   useEffect(() => {
@@ -112,6 +141,9 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
       }));
 
       const response = await api.post(`/quizzes/${quiz._id}/submit`, {
+        quizId: quiz._id,
+        lessonId: quiz.lessonId,
+        courseId: quiz.courseId,
         answers: formattedAnswers,
         timeTakenSeconds,
       });
@@ -119,6 +151,11 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
       if (response.data && response.data.success) {
         const resData = response.data.data;
         setQuizResult(resData);
+
+        // Clear local draft answers on submit
+        if (quiz._id) {
+          localStorage.removeItem(`quiz_draft_${quiz._id}`);
+        }
 
         if (resData.passed) {
           toast.success('🎉 Congratulations! You passed the assessment!');
@@ -142,27 +179,48 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // STEP 11: SKELETON LOADER
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-slate-900 border border-slate-800 rounded-3xl text-white font-sans space-y-4">
-        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm font-medium">Loading Interactive Quiz Assessment...</p>
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-3xl mx-auto space-y-6 animate-pulse">
+        <div className="h-8 bg-slate-800 rounded-xl w-3/4" />
+        <div className="grid grid-cols-4 gap-3">
+          <div className="h-16 bg-slate-800 rounded-2xl" />
+          <div className="h-16 bg-slate-800 rounded-2xl" />
+          <div className="h-16 bg-slate-800 rounded-2xl" />
+          <div className="h-16 bg-slate-800 rounded-2xl" />
+        </div>
+        <div className="h-32 bg-slate-800 rounded-2xl" />
+        <div className="h-12 bg-indigo-900/40 rounded-xl w-1/3 ml-auto" />
       </div>
     );
   }
 
-  if (!quiz) {
+  // STEP 11: ERROR HANDLING (Never blank page)
+  if (!quiz || errorMessage || !quiz.questions || quiz.questions.length === 0) {
     return (
-      <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-white font-sans space-y-3">
-        <FiAlertTriangle className="text-amber-400 text-4xl mx-auto" />
-        <h3 className="text-lg font-bold">Quiz Not Configured Yet</h3>
-        <p className="text-slate-400 text-sm">The instructor has not attached questions to this quiz lesson.</p>
+      <div className="p-8 md:p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-white font-sans space-y-4 max-w-2xl mx-auto shadow-2xl">
+        <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-3xl mx-auto">
+          <FiAlertTriangle />
+        </div>
+        <div>
+          <h3 className="text-xl font-bold">No Quiz Available</h3>
+          <p className="text-slate-400 text-sm mt-1">
+            {errorMessage || 'No quiz has been created for this lesson yet.'}
+          </p>
+        </div>
+        <button
+          onClick={fetchQuizDetails}
+          className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5"
+        >
+          <FiRotateCcw /> Retry Loading
+        </button>
       </div>
     );
   }
 
   const questions = quiz.questions || [];
-  const currentQuestion = questions[currentQuestionIndex];
+  const currentQuestion = questions[currentQuestionIndex] || questions[0];
   const passingLimit = quiz.passingPercentage || quiz.passingScore || 70;
 
   // VIEW 1: START QUIZ LANDING SCREEN
@@ -179,7 +237,7 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
           </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
-              Interactive Assessment
+              Interactive Quiz Assessment
             </span>
             <h2 className="text-2xl font-extrabold text-white mt-1">{quiz.title}</h2>
           </div>
@@ -232,11 +290,12 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
     );
   }
 
-  // VIEW 2: ACTIVE QUIZ STEPPER (1 Question at a Time)
+  // VIEW 2: ACTIVE QUIZ STEPPER (1 Question at a Time with Palette & Timer)
   if (quizStarted && !quizResult && currentQuestion) {
     const isFirstQuestion = currentQuestionIndex === 0;
     const isLastQuestion = currentQuestionIndex === questions.length - 1;
     const isAnswered = selectedAnswers[currentQuestion._id] !== undefined;
+    const totalAnswered = Object.keys(selectedAnswers).length;
 
     return (
       <motion.div
@@ -255,24 +314,59 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
 
           {timeLeftSeconds !== null && (
             <div className="px-3.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl flex items-center gap-2 text-indigo-400 font-mono font-bold text-sm">
-              <FiClock className="animate-pulse" />
+              <FiClock className="animate-pulse text-indigo-400" />
               <span>{formatTimer(timeLeftSeconds)}</span>
             </div>
           )}
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-          <div
-            className="bg-indigo-600 h-full transition-all duration-300 rounded-full"
-            style={{
-              width: `${((currentQuestionIndex + 1) / questions.length) * 100}%`,
-            }}
-          />
+        {/* Question Progress Bar */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-slate-400 font-medium">
+            <span>Progress: {totalAnswered} of {questions.length} answered</span>
+            <span>{Math.round((totalAnswered / questions.length) * 100)}%</span>
+          </div>
+          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div
+              className="bg-indigo-600 h-full transition-all duration-300 rounded-full"
+              style={{
+                width: `${((currentQuestionIndex + 1) / questions.length) * 100}%`,
+              }}
+            />
+          </div>
         </div>
 
-        {/* Question Box */}
-        <div className="space-y-4 pt-2">
+        {/* STEP 5: QUESTION PALETTE */}
+        <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800/80 space-y-2">
+          <span className="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-1">
+            <FiGrid className="text-indigo-400" /> Question Palette (Click to Jump)
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {questions.map((q, qIdx) => {
+              const answered = selectedAnswers[q._id] !== undefined;
+              const isCurrent = qIdx === currentQuestionIndex;
+
+              return (
+                <button
+                  key={q._id || qIdx}
+                  onClick={() => setCurrentQuestionIndex(qIdx)}
+                  className={`w-8 h-8 rounded-lg text-xs font-extrabold transition flex items-center justify-center ${
+                    isCurrent
+                      ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 shadow-md'
+                      : answered
+                      ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {qIdx + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Question Statement Box */}
+        <div className="space-y-4 pt-1">
           <div className="flex items-start justify-between gap-4">
             <h4 className="text-lg font-bold text-white leading-snug">
               {currentQuestionIndex + 1}. {currentQuestion.questionText}
@@ -282,7 +376,7 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
             </span>
           </div>
 
-          {/* Radio Button Options List */}
+          {/* STEP 4: Radio Buttons 4 Options */}
           <div className="space-y-3 pt-2">
             {(currentQuestion.options || []).map((opt, oIdx) => {
               const isSelected = selectedAnswers[currentQuestion._id] === oIdx;
@@ -314,7 +408,7 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
           </div>
         </div>
 
-        {/* Footer Navigation Controls */}
+        {/* Footer Controls */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-800">
           <button
             onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
@@ -324,28 +418,30 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
             <FiArrowLeft /> Previous
           </button>
 
-          {isLastQuestion ? (
+          <div className="flex items-center gap-2">
+            {!isLastQuestion && (
+              <button
+                onClick={() => setCurrentQuestionIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition"
+              >
+                Next <FiArrowRight />
+              </button>
+            )}
+
             <button
               onClick={handleSubmitQuiz}
               disabled={submitting}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition"
             >
-              <FiSend /> {submitting ? 'Evaluating...' : 'Submit Assessment'}
+              <FiSend /> {submitting ? 'Evaluating...' : 'Submit Quiz'}
             </button>
-          ) : (
-            <button
-              onClick={() => setCurrentQuestionIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition"
-            >
-              Next <FiArrowRight />
-            </button>
-          )}
+          </div>
         </div>
       </motion.div>
     );
   }
 
-  // VIEW 3: RESULTS & BREAKDOWN SCREEN
+  // STEP 9: RESULTS & BREAKDOWN SCREEN
   if (quizResult) {
     const timeTakenMin = Math.floor((quizResult.timeTakenSeconds || 0) / 60);
     const timeTakenSec = (quizResult.timeTakenSeconds || 0) % 60;
@@ -369,7 +465,7 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
           </div>
           <div>
             <h2 className="text-2xl font-extrabold text-white">
-              {quizResult.passed ? 'Assessment Passed Successfully!' : 'Assessment Attempt Failed'}
+              {quizResult.passed ? 'Quiz Passed Successfully!' : 'Quiz Attempt Failed'}
             </h2>
             <p className="text-xs text-slate-300 mt-1">
               Required Passing Threshold: <span className="font-bold text-white">{quizResult.passingScore}%</span>
@@ -377,7 +473,25 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
           </div>
         </div>
 
-        {/* Detailed Metrics Grid */}
+        {/* STEP 9: Score Progress Bar */}
+        <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+          <div className="flex justify-between text-xs font-bold text-slate-300">
+            <span>Score Result: {quizResult.scorePercentage}%</span>
+            <span className={quizResult.passed ? 'text-emerald-400' : 'text-rose-400'}>
+              {quizResult.passed ? 'Passed' : 'Failed'}
+            </span>
+          </div>
+          <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-800">
+            <div
+              className={`h-full transition-all duration-500 rounded-full ${
+                quizResult.passed ? 'bg-emerald-500' : 'bg-rose-500'
+              }`}
+              style={{ width: `${Math.min(100, quizResult.scorePercentage)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-center">
             <span className="text-xs text-slate-400 block font-medium">Percentage Score</span>
@@ -422,7 +536,7 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
           </div>
         </div>
 
-        {/* Detailed Questions Review Breakdown */}
+        {/* Questions Review Breakdown */}
         {quizResult.breakdown && quizResult.breakdown.length > 0 && (
           <div className="space-y-4 pt-2">
             <h3 className="text-base font-bold text-white border-b border-slate-800 pb-2">
@@ -499,7 +613,22 @@ const TakeQuiz = ({ quizId: propQuizId, lessonId: propLessonId, onQuizCompleted 
     );
   }
 
-  return null;
+  // FAIL-SAFE BACKUP RENDER (Guarantees zero blank white pages)
+  return (
+    <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-300 font-sans max-w-xl mx-auto">
+      <FiHelpCircle className="text-3xl text-indigo-400 mx-auto mb-2" />
+      <p className="text-sm font-semibold">Interactive Quiz Ready</p>
+      <button
+        onClick={() => {
+          setQuizStarted(false);
+          setQuizResult(null);
+        }}
+        className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold"
+      >
+        View Quiz Details
+      </button>
+    </div>
+  );
 };
 
 export default TakeQuiz;

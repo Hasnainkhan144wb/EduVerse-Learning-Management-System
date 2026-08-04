@@ -13,6 +13,7 @@ router.post('/', protect, authorize('Instructor', 'Admin'), createQuiz);
 router.get('/lesson/:lessonId', protect, getQuizByLesson);
 router.get('/:quizId', protect, getQuizById);
 router.get('/:quizId/analytics', protect, authorize('Instructor', 'Admin'), getQuizAnalytics);
+router.post('/submit', protect, submitQuiz);
 router.post('/:quizId/submit', protect, submitQuiz);
 
 module.exports = router;

@@ -375,59 +375,61 @@ const CoursePlayer = () => {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-0">
         {/* Left Column: Player & Tabbed Content */}
         <div className="lg:col-span-2 p-4 lg:p-6 space-y-6 overflow-y-auto border-r border-slate-800/80">
-          {/* Media Container */}
+          {/* Media / Quiz Container */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-            <div className="relative aspect-video bg-black flex items-center justify-center">
-              {activeLesson?.type === 'quiz' ? (
-                <div className="w-full bg-slate-950 p-2 sm:p-4 overflow-y-auto max-h-[80vh]">
-                  <TakeQuiz
-                    lessonId={activeLesson._id}
-                    onQuizCompleted={fetchCourseAndEnrolmentDetails}
-                  />
-                </div>
-              ) : activeLesson?.type === 'video' && activeLesson?.videoUrl ? (
-                activeLesson.videoUrl.includes('youtube') || activeLesson.videoUrl.includes('vimeo') || activeLesson.videoUrl.includes('youtu.be') ? (
-                  <iframe
-                    src={getEmbedUrl(activeLesson.videoUrl)}
-                    title={activeLesson?.title || 'Lesson Video'}
-                    className="w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
+            {activeLesson?.type?.toLowerCase() === 'quiz' || activeLesson?.contentType?.toLowerCase() === 'quiz' ? (
+              <div className="w-full bg-slate-950 p-4 sm:p-6 min-h-[500px]">
+                <TakeQuiz
+                  lessonId={activeLesson._id}
+                  onQuizCompleted={fetchCourseDetails}
+                />
+              </div>
+            ) : (
+              <div className="relative aspect-video bg-black flex items-center justify-center">
+                {activeLesson?.type === 'video' && activeLesson?.videoUrl ? (
+                  activeLesson.videoUrl.includes('youtube') || activeLesson.videoUrl.includes('vimeo') || activeLesson.videoUrl.includes('youtu.be') ? (
+                    <iframe
+                      src={getEmbedUrl(activeLesson.videoUrl)}
+                      title={activeLesson?.title || 'Lesson Video'}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      ref={videoRef}
+                      src={getEmbedUrl(activeLesson.videoUrl)}
+                      controls
+                      onEnded={handleVideoEnded}
+                      className="w-full h-full object-contain"
+                    />
+                  )
                 ) : (
-                  <video
-                    ref={videoRef}
-                    src={getEmbedUrl(activeLesson.videoUrl)}
-                    controls
-                    onEnded={handleVideoEnded}
-                    className="w-full h-full object-contain"
-                  />
-                )
-              ) : (
-                <div className="text-center p-8 space-y-3">
-                  <div className="w-16 h-16 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 mx-auto text-3xl">
-                    {getLessonIcon(activeLesson?.type)}
-                  </div>
-                  <h3 className="text-lg font-bold text-white">
-                    {activeLesson?.title || 'Select a lesson'}
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-sm">
-                    {activeLesson?.type === 'assignment'
-                      ? 'This lesson contains an Assignment project. Submit your work below.'
-                      : 'Interactive media module ready for review.'}
-                  </p>
+                  <div className="text-center p-8 space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 mx-auto text-3xl">
+                      {getLessonIcon(activeLesson?.type)}
+                    </div>
+                    <h3 className="text-lg font-bold text-white">
+                      {activeLesson?.title || 'Select a lesson'}
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-sm">
+                      {activeLesson?.type === 'assignment'
+                        ? 'This lesson contains an Assignment project. Submit your work below.'
+                        : 'Interactive media module ready for review.'}
+                    </p>
 
-                  {activeLesson?.type === 'assignment' && (
-                    <button
-                      onClick={() => handleOpenAssignment(activeLesson)}
-                      className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-amber-600/30 transition"
-                    >
-                      Submit Assignment
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+                    {activeLesson?.type === 'assignment' && (
+                      <button
+                        onClick={() => handleOpenAssignment(activeLesson)}
+                        className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-amber-600/30 transition"
+                      >
+                        Submit Assignment
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Action Bar Under Player */}
             <div className="p-4 bg-slate-900 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

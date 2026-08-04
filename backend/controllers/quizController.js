@@ -168,10 +168,10 @@ const getQuizByLesson = async (req, res, next) => {
 
     const quizObj = quiz.toObject();
 
-    // If student, sanitize correct options to prevent cheating in inspector
+    // If student, sanitize correct options and explanations to prevent cheating in inspector
     if (!isInstructorOrAdmin) {
       quizObj.questions = (quizObj.questions || []).map((q) => {
-        const { correctOption, correctAnswers, ...studentQuestion } = q;
+        const { correctOption, correctAnswers, explanation, ...studentQuestion } = q;
         return studentQuestion;
       });
     }
@@ -219,7 +219,7 @@ const getQuizById = async (req, res, next) => {
     const quizObj = quiz.toObject();
     if (!isInstructorOrAdmin) {
       quizObj.questions = (quizObj.questions || []).map((q) => {
-        const { correctOption, correctAnswers, ...studentQuestion } = q;
+        const { correctOption, correctAnswers, explanation, ...studentQuestion } = q;
         return studentQuestion;
       });
     }
@@ -238,9 +238,16 @@ const getQuizById = async (req, res, next) => {
 // @access  Private (Student/Enrolled User)
 const submitQuiz = async (req, res, next) => {
   try {
-    const { quizId } = req.params;
+    const quizId = req.params.quizId || req.body.quizId;
     const { answers, timeTakenSeconds } = req.body; // answers: [{ questionId, selectedOptionIndex }]
     const userId = req.user._id;
+
+    if (!quizId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide quizId for submission',
+      });
+    }
 
     if (!answers || !Array.isArray(answers)) {
       return res.status(400).json({
