@@ -83,21 +83,33 @@ const CourseDetails = () => {
   // 2. Fetch Reviews & Enrollment Status
   const fetchReviewsData = useCallback(async () => {
     try {
-      const res = await api.get(`/reviews/course/${courseId}`);
-      if (res.data && res.data.success) {
-        setReviews(res.data.reviews || res.data.data || []);
-        setAverageRating(res.data.averageRating || 0);
-        setTotalReviews(res.data.totalReviews || 0);
-        setRatingBreakdown(res.data.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
-        setIsEnrolled(!!res.data.isEnrolled);
+      const [reviewsRes, statusRes] = await Promise.all([
+        api.get(`/reviews/course/${courseId}`).catch(() => null),
+        api.get(`/courses/${courseId}/review-status`).catch(() => null),
+      ]);
 
-        if (res.data.userReview) {
-          setUserReview(res.data.userReview);
-          setRatingInput(res.data.userReview.rating || 5);
-          setCommentInput(res.data.userReview.comment || res.data.userReview.review || '');
+      if (reviewsRes && reviewsRes.data && reviewsRes.data.success) {
+        setReviews(reviewsRes.data.reviews || reviewsRes.data.data || []);
+        setAverageRating(reviewsRes.data.averageRating || 0);
+        setTotalReviews(reviewsRes.data.totalReviews || 0);
+        setRatingBreakdown(reviewsRes.data.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
+      }
+
+      if (statusRes && statusRes.data && statusRes.data.success) {
+        setIsEnrolled(!!statusRes.data.isEnrolled);
+        if (statusRes.data.userReview) {
+          setUserReview(statusRes.data.userReview);
+          setRatingInput(statusRes.data.userReview.rating || 5);
+          setCommentInput(statusRes.data.userReview.comment || statusRes.data.userReview.review || '');
+        } else if (reviewsRes?.data?.userReview) {
+          setUserReview(reviewsRes.data.userReview);
+          setRatingInput(reviewsRes.data.userReview.rating || 5);
+          setCommentInput(reviewsRes.data.userReview.comment || reviewsRes.data.userReview.review || '');
         } else {
           setUserReview(null);
         }
+      } else if (reviewsRes && reviewsRes.data) {
+        setIsEnrolled(!!reviewsRes.data.isEnrolled);
       }
     } catch (err) {
       console.error('Error fetching reviews:', err);

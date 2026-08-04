@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SearchBar from '../components/SearchBar';
+import NotificationBell from '../components/NotificationBell';
 import {
   FiBookOpen,
   FiLogOut,
   FiUser,
-  FiBell,
   FiMenu,
   FiChevronDown,
 } from 'react-icons/fi';
@@ -67,10 +67,8 @@ const Navbar = ({ onToggleSidebar }) => {
 
         {/* Right Side: Notification & User Menu */}
         <div className="flex items-center gap-3">
-          <button className="relative p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition">
-            <FiBell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
-          </button>
+          {/* Live Notification Bell */}
+          <NotificationBell />
 
           {/* Role Badge */}
           {role && (

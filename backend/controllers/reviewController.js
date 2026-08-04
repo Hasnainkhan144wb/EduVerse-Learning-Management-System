@@ -1,6 +1,8 @@
 const Review = require('../models/Review');
 const Course = require('../models/Course');
 const Enrolment = require('../models/Enrolment');
+const Notification = require('../models/Notification');
+const { removeReviewReminderNotification } = require('./notificationController');
 
 // Helper to recalculate average rating and total review count on Course
 const updateCourseRatingStats = async (courseId) => {
@@ -87,6 +89,25 @@ const createReview = async (req, res, next) => {
     });
 
     await updateCourseRatingStats(courseId);
+
+    // 🔔 Remove any pending review reminder notifications for this course after submission
+    await removeReviewReminderNotification(studentId, courseId);
+
+    // ✅ Create a success "Thank You" notification
+    try {
+      await Notification.create({
+        userId: studentId,
+        user: studentId,
+        courseId: courseId,
+        course: courseId,
+        type: 'review_submitted',
+        title: '✅ Thank You for Your Review!',
+        message: 'Your course review has been submitted successfully. We appreciate your valuable feedback. It helps future learners make informed decisions.',
+        isRead: false,
+      });
+    } catch (notifErr) {
+      console.error('📢 Thank-you notification error:', notifErr.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -196,9 +217,64 @@ const deleteReview = async (req, res, next) => {
   }
 };
 
+// @desc    Get review eligibility status for a course (canReview, alreadyReviewed, progress)
+// @route   GET /api/courses/:courseId/review-status OR GET /api/reviews/can-review/:courseId
+// @access  Private (Optional / Logged In)
+const getReviewStatus = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+
+    if (!req.user) {
+      return res.status(200).json({
+        success: true,
+        canReview: false,
+        alreadyReviewed: false,
+        isEnrolled: false,
+        progress: 0,
+        progressPercentage: 0,
+        message: 'User is not logged in.',
+      });
+    }
+
+    const studentId = req.user._id;
+
+    // Fetch enrollment
+    const enrolment = await Enrolment.findOne({
+      $or: [
+        { studentId: studentId, courseId: courseId },
+        { student: studentId, course: courseId },
+      ],
+    });
+
+    const isEnrolled = !!enrolment;
+    const progressPercentage = enrolment ? (enrolment.progressPercentage || enrolment.progress || 0) : 0;
+    const isCompleted = enrolment ? (progressPercentage >= 100 || enrolment.isCompleted || (enrolment.completedLessons && enrolment.completedLessons.length > 0)) : false;
+
+    // Check existing review
+    const existingReview = await Review.findOne({ courseId, studentId });
+
+    // Can review if student is enrolled & hasn't reviewed yet
+    const canReview = isEnrolled && !existingReview && req.user.role === 'Student';
+
+    return res.status(200).json({
+      success: true,
+      canReview,
+      alreadyReviewed: !!existingReview,
+      isEnrolled,
+      isCompleted,
+      progress: progressPercentage,
+      progressPercentage,
+      userReview: existingReview || null,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get reviews for a course with breakdown statistics
 // @route   GET /api/courses/:courseId/reviews OR GET /api/reviews/course/:courseId
-// @access  Public
+// @access  Public (with optional user resolution)
 const getCourseReviews = async (req, res, next) => {
   try {
     const { courseId } = req.params;
@@ -225,6 +301,8 @@ const getCourseReviews = async (req, res, next) => {
     // Check enrolment & user review status if user is authenticated
     let isEnrolled = false;
     let userReview = null;
+    let progressPercentage = 0;
+    let canReview = false;
 
     if (req.user) {
       const enrolment = await Enrolment.findOne({
@@ -234,10 +312,13 @@ const getCourseReviews = async (req, res, next) => {
         ],
       });
       isEnrolled = !!enrolment;
+      progressPercentage = enrolment ? (enrolment.progressPercentage || enrolment.progress || 0) : 0;
 
       userReview = reviews.find(
-        (r) => r.studentId && r.studentId._id.toString() === req.user._id.toString()
+        (r) => r.studentId && (r.studentId._id || r.studentId).toString() === req.user._id.toString()
       );
+
+      canReview = isEnrolled && !userReview && req.user.role === 'Student';
     }
 
     res.status(200).json({
@@ -247,6 +328,10 @@ const getCourseReviews = async (req, res, next) => {
       totalReviews,
       ratingBreakdown: breakdown,
       isEnrolled,
+      canReview,
+      alreadyReviewed: !!userReview,
+      progressPercentage,
+      progress: progressPercentage,
       userReview: userReview || null,
       data: reviews,
       reviews,
@@ -261,5 +346,6 @@ module.exports = {
   createReview,
   updateReview,
   deleteReview,
+  getReviewStatus,
   getCourseReviews,
 };

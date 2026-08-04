@@ -22,6 +22,7 @@ const certificateRoutes = require('./routes/certificateRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 const instructorRoutes = require('./routes/instructorRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const { protect } = require('./middleware/authMiddleware');
 const { toggleWishlist } = require('./controllers/authController');
@@ -72,6 +73,7 @@ app.use('/api/certificates', certificateRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/discussions', questionRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Direct Aliases
 app.post('/api/users/wishlist', protect, toggleWishlist);

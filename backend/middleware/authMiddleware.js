@@ -91,7 +91,37 @@ const authorize = (...roles) => {
   };
 };
 
+// Optional protection - Attach req.user if token is valid, but do not block if missing
+const protectOptional = async (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'fallback_eduverse_secret_key_2026'
+      );
+      const user = await User.findById(decoded.id).select('-password');
+      if (user) {
+        req.user = user;
+      }
+    } catch (err) {
+      // Ignore token error for optional auth
+    }
+  }
+  next();
+};
+
 module.exports = {
   protect,
+  protectOptional,
   authorize,
 };

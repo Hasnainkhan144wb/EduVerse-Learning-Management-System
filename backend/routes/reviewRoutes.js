@@ -4,13 +4,16 @@ const {
   createReview,
   updateReview,
   deleteReview,
+  getReviewStatus,
   getCourseReviews,
 } = require('../controllers/reviewController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, protectOptional } = require('../middleware/authMiddleware');
 
 router.post('/', protect, createReview);
 router.put('/:id', protect, updateReview);
 router.delete('/:id', protect, deleteReview);
-router.get('/course/:courseId', getCourseReviews);
+router.get('/can-review/:courseId', protectOptional, getReviewStatus);
+router.get('/review-status/:courseId', protectOptional, getReviewStatus);
+router.get('/course/:courseId', protectOptional, getCourseReviews);
 
 module.exports = router;

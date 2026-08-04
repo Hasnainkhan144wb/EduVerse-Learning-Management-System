@@ -16,15 +16,16 @@ const {
   updateCourseStatus,
   approveInstructor,
 } = require('../controllers/courseController');
-const { getCourseReviews } = require('../controllers/reviewController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { getCourseReviews, getReviewStatus } = require('../controllers/reviewController');
+const { protect, protectOptional, authorize } = require('../middleware/authMiddleware');
 const { validateCourseInput } = require('../middleware/validateCourse');
 
-// Public course routes
+// Public course routes (with optional user resolution for enrolment & review status)
 router.get('/published', getPublishedCourses);
 router.get('/', getPublishedCourses || getCourses);
 router.get('/:id', getCourseById);
-router.get('/:courseId/reviews', getCourseReviews);
+router.get('/:courseId/reviews', protectOptional, getCourseReviews);
+router.get('/:courseId/review-status', protectOptional, getReviewStatus);
 
 // Instructor / Admin course CRUD routes
 router.post('/', protect, authorize('Instructor', 'Admin'), validateCourseInput, createCourse);

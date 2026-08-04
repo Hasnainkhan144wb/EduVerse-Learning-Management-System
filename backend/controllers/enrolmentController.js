@@ -2,6 +2,8 @@ const Enrolment = require('../models/Enrolment');
 const Course = require('../models/Course');
 const Lesson = require('../models/Lesson');
 const User = require('../models/User');
+const Review = require('../models/Review');
+const { createReviewReminderNotification } = require('./notificationController');
 
 // @desc    Enrol student in a course
 // @route   POST /api/enrolments/:courseId
@@ -174,6 +176,26 @@ const markLessonComplete = async (req, res, next) => {
     }
 
     await enrolment.save();
+
+    // 🔔 Auto-trigger Review Reminder Notification when course completes (progress = 100%)
+    if (enrolment.progressPercentage >= 100) {
+      try {
+        const alreadyReviewed = await Review.findOne({ courseId, studentId });
+        if (!alreadyReviewed) {
+          const courseDoc = await Course.findById(courseId).select('title thumbnail').lean();
+          if (courseDoc) {
+            await createReviewReminderNotification(
+              studentId,
+              courseId,
+              courseDoc.title,
+              courseDoc.thumbnail || ''
+            );
+          }
+        }
+      } catch (notifErr) {
+        console.error('📢 Review reminder notification error:', notifErr.message);
+      }
+    }
 
     res.status(200).json({
       success: true,

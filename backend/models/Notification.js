@@ -5,7 +5,18 @@ const notificationSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: false,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+    },
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
     },
     title: {
       type: String,
@@ -22,7 +33,6 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['general', 'enrollment', 'assignment', 'course', 'system', 'admin_alert', 'approval'],
       default: 'general',
     },
   },
