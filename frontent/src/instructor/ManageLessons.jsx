@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import { getEmbedUrl } from '../utils/videoEmbed';
+import InstructorQuizPreview from './InstructorQuizPreview';
 import {
   FiPlus,
   FiEdit,
@@ -733,15 +734,25 @@ const ManageLessons = () => {
                 ✕
               </button>
 
-              <div className="mb-4 pr-10">
-                <span className="text-xs font-bold px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md uppercase">
-                  {activePreview.type || 'Lesson Content'}
-                </span>
-                <h2 className="text-2xl font-bold text-white mt-2">{activePreview.title}</h2>
-              </div>
+              {activePreview.type?.toLowerCase() !== 'quiz' && activePreview.contentType?.toLowerCase() !== 'quiz' && (
+                <div className="mb-4 pr-10">
+                  <span className="text-xs font-bold px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md uppercase">
+                    {activePreview.type || 'Lesson Content'}
+                  </span>
+                  <h2 className="text-2xl font-bold text-white mt-2">{activePreview.title}</h2>
+                </div>
+              )}
+
+              {/* INSTRUCTOR QUIZ PREVIEW */}
+              {(activePreview.type?.toLowerCase() === 'quiz' || activePreview.contentType?.toLowerCase() === 'quiz') && (
+                <InstructorQuizPreview
+                  lessonId={activePreview._id}
+                  onClose={() => setActivePreview(null)}
+                />
+              )}
 
               {/* VIDEO PREVIEW */}
-              {(activePreview.type?.toLowerCase() === 'video' || activePreview.videoUrl || activePreview.url || activePreview.contentUrl) && (
+              {activePreview.type?.toLowerCase() !== 'quiz' && activePreview.type?.toLowerCase() !== 'pdf' && (activePreview.type?.toLowerCase() === 'video' || activePreview.videoUrl || activePreview.url || activePreview.contentUrl) && (
                 <div className="aspect-video w-full bg-slate-950 rounded-xl overflow-hidden shadow-inner mb-4 border border-slate-800">
                   {(activePreview.videoUrl || activePreview.url || activePreview.contentUrl) ? (
                     <iframe
