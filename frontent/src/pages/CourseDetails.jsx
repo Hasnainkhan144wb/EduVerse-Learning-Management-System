@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { getFileUrl } from '../utils/getFileUrl';
 import {
   FiBookOpen,
   FiVideo,
@@ -673,12 +674,13 @@ const CourseDetails = () => {
           <div className="sticky top-24 bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-6">
             <div className="relative h-48 rounded-2xl overflow-hidden bg-slate-800">
               <img
-                src={
-                  course.thumbnail ||
-                  'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80'
-                }
-                alt={course.title}
+                src={getFileUrl(course.thumbnail || course.coverImage)}
+                alt={course.title || 'Course Thumbnail'}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop';
+                }}
               />
             </div>
 

@@ -252,6 +252,7 @@ const createCourse = async (req, res, next) => {
       description,
       thumbnail,
       categoryRef,
+      category,
       price,
       level,
       language,
@@ -259,24 +260,51 @@ const createCourse = async (req, res, next) => {
       objectives,
     } = req.body;
 
-    if (!title || !description || !categoryRef) {
+    const targetCategory = categoryRef || category;
+
+    if (!title || !description || !targetCategory) {
       return res.status(400).json({
         success: false,
         message: 'Please provide title, description, and category',
       });
     }
 
+    let finalThumbnail = thumbnail || '';
+    if (req.file) {
+      finalThumbnail = `/uploads/thumbnails/${req.file.filename}`;
+    } else if (req.files && req.files.length > 0) {
+      finalThumbnail = `/uploads/thumbnails/${req.files[0].filename}`;
+    }
+
+    let parsedObjectives = objectives || [];
+    if (typeof parsedObjectives === 'string') {
+      try {
+        parsedObjectives = JSON.parse(parsedObjectives);
+      } catch (e) {
+        parsedObjectives = parsedObjectives.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+
+    let parsedRequirements = requirements || [];
+    if (typeof parsedRequirements === 'string') {
+      try {
+        parsedRequirements = JSON.parse(parsedRequirements);
+      } catch (e) {
+        parsedRequirements = parsedRequirements.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+
     const course = await Course.create({
-      title,
-      description,
-      thumbnail: thumbnail || '',
+      title: title.trim(),
+      description: description.trim(),
+      thumbnail: finalThumbnail,
       instructorRef: req.user._id,
-      categoryRef,
+      categoryRef: targetCategory,
       price: price || 0,
       level: level || 'Beginner',
       language: language || 'English',
-      requirements: requirements || [],
-      objectives: objectives || [],
+      requirements: parsedRequirements,
+      objectives: parsedObjectives,
       status: 'Draft',
     });
 
@@ -319,7 +347,35 @@ const updateCourse = async (req, res, next) => {
       });
     }
 
-    course = await Course.findByIdAndUpdate(req.params.id, req.body, {
+    const updateData = { ...req.body };
+
+    if (req.file) {
+      updateData.thumbnail = `/uploads/thumbnails/${req.file.filename}`;
+    } else if (req.files && req.files.length > 0) {
+      updateData.thumbnail = `/uploads/thumbnails/${req.files[0].filename}`;
+    }
+
+    if (updateData.category) {
+      updateData.categoryRef = updateData.category;
+    }
+
+    if (updateData.objectives && typeof updateData.objectives === 'string') {
+      try {
+        updateData.objectives = JSON.parse(updateData.objectives);
+      } catch (e) {
+        updateData.objectives = updateData.objectives.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+
+    if (updateData.requirements && typeof updateData.requirements === 'string') {
+      try {
+        updateData.requirements = JSON.parse(updateData.requirements);
+      } catch (e) {
+        updateData.requirements = updateData.requirements.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+
+    course = await Course.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });

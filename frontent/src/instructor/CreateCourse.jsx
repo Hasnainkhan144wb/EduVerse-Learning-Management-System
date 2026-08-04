@@ -6,13 +6,14 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import {
   FiBookOpen,
-  FiUploadCloud,
   FiArrowRight,
   FiArrowLeft,
   FiPlus,
   FiTrash2,
   FiEdit,
 } from 'react-icons/fi';
+
+import { getFileUrl } from '../utils/getFileUrl';
 
 const CreateCourse = () => {
   const navigate = useNavigate();
@@ -24,11 +25,15 @@ const CreateCourse = () => {
   const [loading, setLoading] = useState(false);
   const [loadingCourse, setLoadingCourse] = useState(isEditMode);
 
+  // File Upload & Preview state
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+
   // Objectives & Requirements state
   const [objectives, setObjectives] = useState(['']);
   const [requirements, setRequirements] = useState(['']);
 
-  const { register, handleSubmit, setValue } = useForm({
+  const { register, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
       title: '',
       description: '',
@@ -39,6 +44,8 @@ const CreateCourse = () => {
       thumbnail: '',
     },
   });
+
+  const thumbnailValue = watch('thumbnail');
 
   // 1. Fetch Categories
   useEffect(() => {
@@ -68,7 +75,6 @@ const CreateCourse = () => {
           setValue('title', course.title || '');
           setValue('description', course.description || '');
 
-          // Resolve Category ID
           const catId =
             course.categoryRef?._id ||
             course.categoryRef ||
@@ -80,9 +86,13 @@ const CreateCourse = () => {
           setValue('level', course.level || course.skillLevel || 'Beginner');
           setValue('language', course.language || 'English');
           setValue('price', course.price !== undefined ? course.price : 0);
-          setValue('thumbnail', course.thumbnail || course.coverImage || '');
 
-          // Resolve Objectives
+          const thumb = course.thumbnail || course.coverImage || '';
+          setValue('thumbnail', thumb);
+          if (thumb) {
+            setPreviewUrl(thumb);
+          }
+
           let objs = [];
           if (Array.isArray(course.objectives) && course.objectives.length > 0) {
             objs = course.objectives;
@@ -98,7 +108,6 @@ const CreateCourse = () => {
           }
           if (objs.length > 0) setObjectives(objs);
 
-          // Resolve Requirements
           if (Array.isArray(course.requirements) && course.requirements.length > 0) {
             setRequirements(course.requirements);
           }
@@ -147,8 +156,8 @@ const CreateCourse = () => {
       toast.error('Please set a Course Price!');
       return false;
     }
-    if (!data.thumbnail || !data.thumbnail.trim()) {
-      toast.error('Please provide a Thumbnail image URL!');
+    if (!selectedImageFile && (!data.thumbnail || !data.thumbnail.trim())) {
+      toast.error('Please upload a local photo or provide a thumbnail image URL!');
       return false;
     }
     return true;
@@ -162,22 +171,37 @@ const CreateCourse = () => {
       const filteredObjectives = objectives.filter((obj) => obj.trim() !== '');
       const filteredRequirements = requirements.filter((req) => req.trim() !== '');
 
-      const payload = {
-        ...data,
-        objectives: filteredObjectives,
-        requirements: filteredRequirements,
-      };
+      const submitData = new FormData();
+      submitData.append('title', data.title);
+      submitData.append('description', data.description);
+      submitData.append('category', data.categoryRef);
+      submitData.append('categoryRef', data.categoryRef);
+      submitData.append('level', data.level);
+      submitData.append('price', data.price);
+      submitData.append('language', data.language || 'English');
+      submitData.append('objectives', JSON.stringify(filteredObjectives));
+      submitData.append('requirements', JSON.stringify(filteredRequirements));
+
+      if (selectedImageFile) {
+        submitData.append('thumbnailFile', selectedImageFile);
+        submitData.append('file', selectedImageFile);
+        submitData.append('thumbnail', selectedImageFile);
+      } else {
+        submitData.append('thumbnail', data.thumbnail || '');
+      }
 
       if (isEditMode) {
-        // Submit Update
-        const response = await api.put(`/courses/${targetCourseId}`, payload);
+        const response = await api.put(`/courses/${targetCourseId}`, submitData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         if (response.data && (response.data.success || response.status === 200)) {
           toast.success('Course details updated successfully! 🎉');
           navigate('/instructor/courses');
         }
       } else {
-        // Submit Create
-        const response = await api.post('/courses', payload);
+        const response = await api.post('/courses', submitData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         if (response.data && response.data.success) {
           const createdCourse = response.data.data;
           toast.success('Course basic info saved! Now manage curriculum sections & lessons. 🎉');
@@ -185,8 +209,8 @@ const CreateCourse = () => {
         }
       }
     } catch (err) {
-      console.error('Course save error:', err);
-      toast.error(err.response?.data?.message || (isEditMode ? 'Failed to update course' : 'Failed to create course'));
+      console.error('Course Save Error:', err);
+      toast.error(err.response?.data?.message || (isEditMode ? 'Failed to save course changes' : 'Failed to create course'));
     } finally {
       setLoading(false);
     }
@@ -194,7 +218,7 @@ const CreateCourse = () => {
 
   if (loadingCourse) {
     return (
-      <div className="p-16 text-center bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl mx-auto my-12 text-white">
+      <div className="p-16 text-center bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl mx-auto my-12 text-white font-sans">
         <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
         <p className="text-slate-400 text-sm font-semibold">Loading course specifications...</p>
       </div>
@@ -206,7 +230,7 @@ const CreateCourse = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="max-w-4xl mx-auto space-y-8"
+      className="max-w-4xl mx-auto space-y-8 font-sans"
     >
       {/* Top Banner Header */}
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex items-center justify-between">
@@ -220,8 +244,8 @@ const CreateCourse = () => {
           </h1>
           <p className="text-slate-400 text-sm mt-1">
             {isEditMode
-              ? 'Update title, description, category, pricing, and objectives for this course.'
-              : 'Fill in the essential course information, pricing, and learning objectives.'}
+              ? 'Update title, description, category, pricing, and cover image for this course.'
+              : 'Fill in the essential course information, pricing, and cover image.'}
           </p>
         </div>
 
@@ -317,19 +341,59 @@ const CreateCourse = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Thumbnail Cover Image URL
+          {/* THUMBNAIL COVER IMAGE (SYSTEM UPLOAD ONLY) */}
+          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+              🖼️ Course Thumbnail Cover Image
             </label>
-            <div className="relative">
-              <FiUploadCloud className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+
+            {/* FULL-WIDTH SYSTEM FILE PICKER */}
+            <div className="border-2 border-dashed border-slate-800 hover:border-indigo-500 rounded-2xl p-6 text-center bg-slate-900 cursor-pointer relative transition-all group">
               <input
-                type="url"
-                placeholder="https://images.unsplash.com/photo-..."
-                {...register('thumbnail')}
-                className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setSelectedImageFile(file);
+                    setPreviewUrl(URL.createObjectURL(file));
+                  }
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
               />
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center text-2xl mb-2 group-hover:scale-110 transition-transform border border-indigo-500/20">
+                  📁
+                </div>
+                <p className="text-sm font-bold text-slate-200">
+                  {selectedImageFile ? selectedImageFile.name : 'Click to Upload Photo from System'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Supports PNG, JPG, JPEG, WEBP (Max File Size: 10MB)
+                </p>
+              </div>
             </div>
+
+            {/* IMAGE PREVIEW DISPLAY */}
+            {(previewUrl || thumbnailValue) && (
+              <div className="mt-3 p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center gap-4">
+                <img
+                  src={getFileUrl(previewUrl || thumbnailValue)}
+                  alt="Thumbnail Preview"
+                  className="w-20 h-14 object-cover rounded-lg border border-slate-700 shadow-sm"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop';
+                  }}
+                />
+                <div>
+                  <p className="text-xs font-bold text-slate-200">Thumbnail Preview</p>
+                  <p className="text-[11px] text-slate-400">
+                    {selectedImageFile ? `Selected: ${selectedImageFile.name}` : 'Current saved course image'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Dynamic Learning Objectives */}

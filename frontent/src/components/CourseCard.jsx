@@ -6,6 +6,8 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { FiStar, FiArrowRight, FiBookmark } from 'react-icons/fi';
 
+import { getFileUrl } from '../utils/getFileUrl';
+
 const CourseCard = ({ course, onWatchlistToggle }) => {
   const { user } = useAuth();
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -49,12 +51,13 @@ const CourseCard = ({ course, onWatchlistToggle }) => {
     >
       <div className="h-44 bg-slate-950 relative overflow-hidden">
         <img
-          src={
-            course.thumbnail ||
-            'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'
-          }
-          alt={course.title}
+          src={getFileUrl(course.thumbnail || course.coverImage)}
+          alt={course.title || 'Course Thumbnail'}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop';
+          }}
         />
 
         {/* Level Badge */}

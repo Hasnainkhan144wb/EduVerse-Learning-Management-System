@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { getFileUrl } from '../utils/getFileUrl';
 import {
   FiBookOpen,
   FiPlusCircle,
@@ -114,12 +115,13 @@ const InstructorCourses = () => {
               {/* Thumbnail Header */}
               <div className="h-44 bg-slate-950 relative overflow-hidden">
                 <img
-                  src={
-                    course.thumbnail ||
-                    'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500&auto=format&fit=crop&q=80'
-                  }
-                  alt={course.title}
+                  src={getFileUrl(course.thumbnail || course.coverImage)}
+                  alt={course.title || 'Course Thumbnail'}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop';
+                  }}
                 />
                 <div className="absolute top-3 right-3 flex items-center gap-2">
                   <span
