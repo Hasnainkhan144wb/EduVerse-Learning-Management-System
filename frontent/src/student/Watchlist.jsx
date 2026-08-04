@@ -18,29 +18,11 @@ const Watchlist = () => {
   const fetchWatchlist = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users/watchlist');
-      if (response.data && response.data.success) {
-        setWatchlistItems(response.data.watchlist || response.data.data || []);
-      } else {
-        const fallback = await api.get('/auth/me');
-        if (fallback.data && fallback.data.success) {
-          setWatchlistItems(
-            fallback.data.data.watchlist || fallback.data.data.wishlist || []
-          );
-        }
-      }
+      const res = await api.get('/users/watchlist');
+      const list = res.data.wishlist || res.data.watchlist || res.data.data || [];
+      setWatchlistItems(list.filter((c) => c !== null && c !== undefined && typeof c === 'object'));
     } catch (err) {
       console.error('Error fetching watchlist:', err);
-      try {
-        const fallback = await api.get('/auth/me');
-        if (fallback.data && fallback.data.success) {
-          setWatchlistItems(
-            fallback.data.data.watchlist || fallback.data.data.wishlist || []
-          );
-        }
-      } catch (e) {
-        console.error('Fallback fetch failed');
-      }
     } finally {
       setLoading(false);
     }
@@ -50,15 +32,29 @@ const Watchlist = () => {
     fetchWatchlist();
   }, []);
 
-  const handleToggleWatchlist = async (courseId) => {
+  const handleToggleWatchlist = async (courseItem) => {
+    // Extract exact string ID
+    const targetCourseId =
+      typeof courseItem === 'object' && courseItem !== null
+        ? courseItem._id || courseItem.id
+        : courseItem;
+
+    if (!targetCourseId) return;
+
+    // Optimistic UI Update
+    setWatchlistItems((prev) =>
+      prev.filter((item) => String(item._id || item) !== String(targetCourseId))
+    );
+
     try {
-      const response = await api.post('/users/watchlist/toggle', { courseId });
+      const response = await api.post('/users/watchlist/toggle', { courseId: targetCourseId });
       if (response.data && response.data.success) {
         toast.success(response.data.message || 'Updated watchlist!');
-        fetchWatchlist();
       }
-    } catch (err) {
-      toast.error('Failed to update watchlist');
+    } catch (error) {
+      console.error('Remove Error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update watchlist');
+      fetchWatchlist();
     }
   };
 
@@ -117,8 +113,8 @@ const Watchlist = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {watchlistItems.map((course) => (
             <div
-              key={course._id}
-              className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between group hover:border-slate-700 transition"
+              key={course._id || course.id || Math.random()}
+              className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between group hover:border-slate-700 transition font-sans"
             >
               <div className="relative h-44 bg-slate-800 overflow-hidden">
                 <img
@@ -130,8 +126,11 @@ const Watchlist = () => {
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                 />
                 <button
-                  onClick={() => handleToggleWatchlist(course._id)}
-                  className="absolute top-3 right-3 p-2 bg-slate-950/80 hover:bg-red-600/90 text-slate-300 hover:text-white rounded-full transition shadow-md"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleWatchlist(course);
+                  }}
+                  className="absolute top-3 right-3 p-2.5 bg-slate-950/90 hover:bg-red-600/90 text-slate-300 hover:text-white rounded-full transition shadow-md cursor-pointer z-10"
                   title="Remove from Watchlist"
                 >
                   <FiTrash2 className="w-4 h-4" />

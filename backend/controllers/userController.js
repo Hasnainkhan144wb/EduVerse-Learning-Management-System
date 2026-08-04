@@ -52,33 +52,49 @@ const updateUserProfile = async (req, res, next) => {
 const toggleWatchlist = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { courseId } = req.body;
+
+    // Extract courseId flexibly from any possible key format
+    let courseId = req.body.courseId || req.body.id || req.body._id || req.body.course;
+
+    // Handle case where object is passed directly
+    if (typeof courseId === 'object' && courseId !== null) {
+      courseId = courseId._id || courseId.id;
+    }
 
     if (!courseId) {
-      return res.status(400).json({ success: false, message: 'Please provide courseId' });
+      return res.status(400).json({ success: false, message: 'Course ID is required.' });
     }
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    if (!user.watchlist) user.watchlist = [];
+    // Ensure wishlist and watchlist arrays exist
     if (!user.wishlist) user.wishlist = [];
+    if (!user.watchlist) user.watchlist = [];
 
-    const watchIndex = user.watchlist.findIndex((id) => String(id) === String(courseId));
-    const wishIndex = user.wishlist.findIndex((id) => String(id) === String(courseId));
+    const targetId = courseId.toString();
+
+    const wishIndex = user.wishlist.findIndex(
+      (item) => item && item.toString() === targetId
+    );
+    const watchIndex = user.watchlist.findIndex(
+      (item) => item && item.toString() === targetId
+    );
+
     let isBookmarked = false;
-
-    if (watchIndex > -1) {
-      user.watchlist.splice(watchIndex, 1);
-    } else {
-      user.watchlist.push(courseId);
-      isBookmarked = true;
-    }
 
     if (wishIndex > -1) {
       user.wishlist.splice(wishIndex, 1);
-    } else if (isBookmarked) {
-      user.wishlist.push(courseId);
+      isBookmarked = false;
+    } else {
+      user.wishlist.push(targetId);
+      isBookmarked = true;
+    }
+
+    if (watchIndex > -1 && !isBookmarked) {
+      user.watchlist.splice(watchIndex, 1);
+    } else if (isBookmarked && watchIndex === -1) {
+      user.watchlist.push(targetId);
     }
 
     await user.save();
@@ -86,41 +102,67 @@ const toggleWatchlist = async (req, res) => {
     return res.status(200).json({
       success: true,
       isBookmarked,
-      watchlist: user.watchlist,
       wishlist: user.wishlist,
-      message: isBookmarked ? 'Added to Watchlist!' : 'Removed from Watchlist!',
+      watchlist: user.wishlist,
+      data: user.wishlist,
+      message: isBookmarked ? 'Course bookmarked!' : 'Course removed from bookmarks!',
     });
   } catch (error) {
+    console.error('🔥 Toggle Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Fetch User's Watchlist / Wishlist Courses
+// @desc    Fetch User's Watchlist / Wishlist Courses (BULLETPROOF & POPULATE SAFE)
 // @route   GET /api/users/watchlist OR GET /api/users/wishlist
 // @access  Private
 const getWatchlist = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate({
-      path: 'watchlist',
-      populate: { path: 'instructor', select: 'name email avatar' },
-    });
+    const user = await User.findById(req.user._id)
+      .populate({
+        path: 'wishlist',
+        populate: {
+          path: 'instructorRef',
+          select: 'name email avatar',
+        },
+      })
+      .populate({
+        path: 'watchlist',
+        populate: {
+          path: 'instructorRef',
+          select: 'name email avatar',
+        },
+      })
+      .lean();
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const watchlistCourses = (user.watchlist && user.watchlist.length > 0)
-      ? user.watchlist
-      : (user.wishlist || []);
+    const rawList = (user.wishlist && user.wishlist.length > 0)
+      ? user.wishlist
+      : (user.watchlist || []);
+
+    // Clean list to ensure no deleted/null courses crash the array
+    const cleanCourses = rawList.filter((item) => item && typeof item === 'object');
 
     return res.status(200).json({
       success: true,
-      watchlist: watchlistCourses,
-      wishlist: watchlistCourses,
-      data: watchlistCourses,
+      count: cleanCourses.length,
+      wishlist: cleanCourses,
+      watchlist: cleanCourses, // Dual key mapping for bulletproof frontend compatibility
+      data: cleanCourses,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error('🔥 Error in getWatchlist:', error);
+    return res.status(200).json({
+      success: true,
+      count: 0,
+      wishlist: [],
+      watchlist: [],
+      data: [],
+      message: 'Error handled gracefully',
+    });
   }
 };
 

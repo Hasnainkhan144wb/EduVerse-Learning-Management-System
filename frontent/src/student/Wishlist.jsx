@@ -18,10 +18,9 @@ const Wishlist = () => {
   const fetchWishlist = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/auth/me');
-      if (response.data.success && response.data.data.wishlist) {
-        setWishlistItems(response.data.data.wishlist);
-      }
+      const res = await api.get('/users/watchlist');
+      const list = res.data.wishlist || res.data.watchlist || res.data.data || [];
+      setWishlistItems(list.filter((c) => c !== null && c !== undefined && typeof c === 'object'));
     } catch (err) {
       console.error('Error fetching wishlist:', err);
     } finally {
@@ -33,15 +32,27 @@ const Wishlist = () => {
     fetchWishlist();
   }, []);
 
-  const handleRemoveWishlist = async (courseId) => {
+  const handleRemoveWishlist = async (courseItem) => {
+    // Extract exact string ID
+    const targetCourseId =
+      typeof courseItem === 'object' && courseItem !== null
+        ? courseItem._id || courseItem.id
+        : courseItem;
+
+    if (!targetCourseId) return;
+
+    // Optimistic UI Update
+    setWishlistItems((prev) =>
+      prev.filter((c) => String(c._id || c) !== String(targetCourseId))
+    );
+
     try {
-      const response = await api.post('/auth/wishlist', { courseId });
-      if (response.data.success) {
-        toast.success('Course removed from wishlist');
-        fetchWishlist();
-      }
+      const res = await api.post('/users/watchlist/toggle', { courseId: targetCourseId });
+      toast.success(res.data.message || 'Removed from Watchlist!');
     } catch (err) {
-      toast.error('Failed to update wishlist');
+      console.error('Remove Error:', err);
+      toast.error(err.response?.data?.message || 'Failed to remove course');
+      fetchWishlist(); // Revert on failure
     }
   };
 
@@ -50,7 +61,7 @@ const Wishlist = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-8 max-w-6xl mx-auto"
+      className="space-y-8 max-w-6xl mx-auto font-sans"
     >
       {/* Header */}
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -59,7 +70,7 @@ const Wishlist = () => {
             Student Portal • Saved Items
           </span>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
-            <FiHeart className="text-pink-500 fill-pink-500" /> My Saved Wishlist
+            <FiHeart className="text-pink-500 fill-pink-500" /> My Saved Watchlist
           </h1>
           <p className="text-slate-400 text-sm mt-1">
             Bookmark interesting courses to enrol in when you are ready.
@@ -85,9 +96,9 @@ const Wishlist = () => {
           <div className="w-16 h-16 bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto text-3xl">
             <FiHeart />
           </div>
-          <h3 className="text-lg font-bold text-white">Your Wishlist is Empty</h3>
+          <h3 className="text-lg font-bold text-white">Your Watchlist is Empty</h3>
           <p className="text-slate-400 text-xs max-w-sm mx-auto">
-            Browse our course catalog and click the heart icon to save courses to your personal wishlist.
+            Browse our course catalog and click the heart icon to save courses to your personal watchlist.
           </p>
           <Link
             to="/courses"
@@ -100,7 +111,7 @@ const Wishlist = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {wishlistItems.map((course) => (
             <div
-              key={course._id}
+              key={course._id || course.id || Math.random()}
               className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between group hover:border-slate-700 transition"
             >
               <div className="relative h-44 bg-slate-800 overflow-hidden">
@@ -113,9 +124,12 @@ const Wishlist = () => {
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                 />
                 <button
-                  onClick={() => handleRemoveWishlist(course._id)}
-                  className="absolute top-3 right-3 p-2 bg-slate-950/80 hover:bg-red-600/90 text-slate-300 hover:text-white rounded-full transition shadow-md"
-                  title="Remove from wishlist"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveWishlist(course);
+                  }}
+                  className="absolute top-3 right-3 p-2.5 bg-slate-950/90 hover:bg-red-600/90 text-slate-300 hover:text-white rounded-full transition shadow-md cursor-pointer z-10"
+                  title="Remove from Watchlist"
                 >
                   <FiTrash2 className="w-4 h-4" />
                 </button>

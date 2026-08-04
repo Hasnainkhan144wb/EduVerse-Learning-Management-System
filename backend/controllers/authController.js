@@ -260,7 +260,7 @@ const updateUserProfile = async (req, res, next) => {
 // @access  Private
 const toggleWishlist = async (req, res, next) => {
   try {
-    const { courseId } = req.body;
+    const courseId = req.body.courseId || req.body.id || req.body.course;
     const userId = req.user._id;
 
     if (!courseId) {
@@ -272,22 +272,44 @@ const toggleWishlist = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const index = user.wishlist.indexOf(courseId);
+    if (!user.wishlist) user.wishlist = [];
+    if (!user.watchlist) user.watchlist = [];
+
+    const index = user.wishlist.findIndex(
+      (id) => id && id.toString() === courseId.toString()
+    );
+    const watchIndex = user.watchlist.findIndex(
+      (id) => id && id.toString() === courseId.toString()
+    );
+
+    let isBookmarked = false;
     let message = '';
+
     if (index > -1) {
       user.wishlist.splice(index, 1);
       message = 'Course removed from wishlist';
+      isBookmarked = false;
     } else {
       user.wishlist.push(courseId);
       message = 'Course added to wishlist';
+      isBookmarked = true;
+    }
+
+    if (watchIndex > -1 && !isBookmarked) {
+      user.watchlist.splice(watchIndex, 1);
+    } else if (isBookmarked && watchIndex === -1) {
+      user.watchlist.push(courseId);
     }
 
     await user.save();
 
     res.status(200).json({
       success: true,
+      isBookmarked,
       message,
       data: user.wishlist,
+      wishlist: user.wishlist,
+      watchlist: user.watchlist,
     });
   } catch (error) {
     if (typeof next === 'function') next(error);
