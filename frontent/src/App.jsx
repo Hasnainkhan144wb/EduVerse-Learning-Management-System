@@ -24,6 +24,7 @@ import CoursePlayer from './student/CoursePlayer';
 import TakeQuiz from './student/TakeQuiz';
 import StudentAssignments from './student/StudentAssignments';
 import Wishlist from './student/Wishlist';
+import Watchlist from './student/Watchlist';
 import Checkout from './student/Checkout';
 import StudentCertificates from './student/StudentCertificates';
 import StudentQnADiscussions from './pages/student/StudentQuestions';
@@ -128,7 +129,8 @@ function App() {
         <Route path="my-courses" element={<MyCourses />} />
         <Route path="assignments" element={<StudentAssignments />} />
         <Route path="questions" element={<StudentQnADiscussions />} />
-        <Route path="wishlist" element={<Wishlist />} />
+        <Route path="wishlist" element={<Watchlist />} />
+        <Route path="watchlist" element={<Watchlist />} />
         <Route path="certificates" element={<StudentCertificates />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>

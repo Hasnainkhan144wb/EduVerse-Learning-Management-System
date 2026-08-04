@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import SearchBar from '../components/SearchBar';
 import Footer from '../components/Footer';
+import CourseCard from '../components/CourseCard';
 import {
   FiBookOpen,
   FiFilter,
@@ -261,49 +262,7 @@ const BrowseCourses = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {courses.map((course) => (
-                <motion.div
-                  key={course._id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl hover:border-slate-700 transition flex flex-col group"
-                >
-                  <div className="h-44 bg-slate-950 relative overflow-hidden">
-                    <img
-                      src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                    <div className="absolute top-3 right-3 px-2.5 py-1 bg-slate-950/80 backdrop-blur-md text-xs font-semibold text-blue-400 rounded-full border border-slate-700">
-                      {course.level || 'Beginner'}
-                    </div>
-                  </div>
-
-                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                    <div className="space-y-2">
-                      <h3 className="text-base font-bold text-white group-hover:text-indigo-400 transition line-clamp-2">
-                        {course.title}
-                      </h3>
-                      <p className="text-xs text-slate-400 line-clamp-2">{course.description}</p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                      <div className="flex items-center gap-1 text-amber-400 text-xs font-bold">
-                        <FiStar className="fill-amber-400" />
-                        <span>{course.rating || 5.0}</span>
-                      </div>
-                      <div className="text-emerald-400 font-extrabold text-sm">
-                        {course.price === 0 ? 'Free' : `$${course.price || 49.99}`}
-                      </div>
-                    </div>
-
-                    <Link
-                      to={`/courses/${course._id}`}
-                      className="w-full py-2.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5"
-                    >
-                      View Course Details <FiArrowRight />
-                    </Link>
-                  </div>
-                </motion.div>
+                <CourseCard key={course._id} course={course} />
               ))}
             </div>
           )}

@@ -18,6 +18,7 @@ import {
   FiDollarSign,
   FiChevronDown,
   FiChevronUp,
+  FiBookmark,
 } from 'react-icons/fi';
 
 const CourseDetails = () => {
@@ -28,6 +29,7 @@ const CourseDetails = () => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
 
   useEffect(() => {
@@ -39,12 +41,12 @@ const CourseDetails = () => {
           const courseData = response.data.data;
           setCourse(courseData);
 
-          // Check if current student is enrolled
-          if (user && user.enrolledCourses) {
-            const enrolled = user.enrolledCourses.some(
-              (c) => (c._id || c) === courseId
+          if (user && courseId) {
+            const watchlist = user.watchlist || user.wishlist || [];
+            const inWatchlist = watchlist.some(
+              (item) => String(item._id || item) === String(courseId)
             );
-            setIsEnrolled(enrolled);
+            setIsBookmarked(inWatchlist);
           }
 
           // Expand all sections by default
@@ -291,12 +293,41 @@ const CourseDetails = () => {
                 Go to Course Player <FiArrowRight />
               </Link>
             ) : (
-              <Link
-                to={isAuthenticated ? `/checkout/${course._id}` : '/login'}
-                className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition"
-              >
-                Enrol Now <FiArrowRight />
-              </Link>
+              <div className="space-y-2.5">
+                <Link
+                  to={isAuthenticated ? `/checkout/${course._id}` : '/login'}
+                  className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition"
+                >
+                  Enrol Now <FiArrowRight />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!user) {
+                      toast.error('Please login to bookmark courses!');
+                      return;
+                    }
+                    try {
+                      const res = await api.post('/users/watchlist/toggle', { courseId });
+                      if (res.data && res.data.success) {
+                        setIsBookmarked(res.data.isBookmarked);
+                        toast.success(res.data.message);
+                      }
+                    } catch (err) {
+                      toast.error('Failed to update watchlist');
+                    }
+                  }}
+                  className={`w-full py-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
+                    isBookmarked
+                      ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/40'
+                      : 'bg-slate-950 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <FiBookmark className={isBookmarked ? 'fill-indigo-400 text-indigo-400' : ''} />
+                  {isBookmarked ? 'Saved to Watchlist' : 'Add to Watchlist'}
+                </button>
+              </div>
             )}
 
             <div className="space-y-2.5 pt-2 border-t border-slate-800 text-xs text-slate-400">
