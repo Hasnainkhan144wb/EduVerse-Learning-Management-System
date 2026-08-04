@@ -152,6 +152,8 @@ function App() {
         <Route path="create-course" element={<CreateCourse />} />
         <Route path="builder" element={<CourseBuilder />} />
         <Route path="courses/edit/:courseId" element={<CreateCourse />} />
+        <Route path="courses/edit/:id" element={<CreateCourse />} />
+        <Route path="edit-course/:id" element={<CreateCourse />} />
         <Route path="courses/:courseId/lessons" element={<ManageLessons />} />
         <Route path="quiz/create" element={<CreateQuiz />} />
         <Route path="quizzes/create/:lessonId?" element={<CreateQuiz />} />

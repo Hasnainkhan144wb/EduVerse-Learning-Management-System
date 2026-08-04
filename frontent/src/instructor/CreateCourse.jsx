@@ -1,24 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import {
   FiBookOpen,
-  FiDollarSign,
   FiUploadCloud,
   FiArrowRight,
   FiArrowLeft,
-  FiCheckCircle,
   FiPlus,
   FiTrash2,
+  FiEdit,
 } from 'react-icons/fi';
 
 const CreateCourse = () => {
   const navigate = useNavigate();
+  const { courseId, id } = useParams();
+  const targetCourseId = courseId || id;
+  const isEditMode = Boolean(targetCourseId);
+
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingCourse, setLoadingCourse] = useState(isEditMode);
 
   // Objectives & Requirements state
   const [objectives, setObjectives] = useState(['']);
@@ -36,20 +40,81 @@ const CreateCourse = () => {
     },
   });
 
-  // Fetch categories on mount
+  // 1. Fetch Categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await api.get('/categories');
-        if (response.data.success) {
-          setCategories(response.data.data);
+        if (response.data && response.data.success) {
+          setCategories(response.data.data || []);
         }
       } catch (err) {
-        console.error('Failed to load categories');
+        console.error('Failed to load categories', err);
       }
     };
     fetchCategories();
   }, []);
+
+  // 2. Fetch and Pre-fill Existing Course Data (Edit Mode)
+  useEffect(() => {
+    const fetchCourseDetails = async () => {
+      if (!targetCourseId) return;
+      try {
+        setLoadingCourse(true);
+        const res = await api.get(`/courses/${targetCourseId}`);
+        const course = res.data?.data || res.data?.course || res.data;
+
+        if (course) {
+          setValue('title', course.title || '');
+          setValue('description', course.description || '');
+
+          // Resolve Category ID
+          const catId =
+            course.categoryRef?._id ||
+            course.categoryRef ||
+            course.category?._id ||
+            course.category ||
+            '';
+          setValue('categoryRef', catId);
+
+          setValue('level', course.level || course.skillLevel || 'Beginner');
+          setValue('language', course.language || 'English');
+          setValue('price', course.price !== undefined ? course.price : 0);
+          setValue('thumbnail', course.thumbnail || course.coverImage || '');
+
+          // Resolve Objectives
+          let objs = [];
+          if (Array.isArray(course.objectives) && course.objectives.length > 0) {
+            objs = course.objectives;
+          } else if (course.whatYouWillLearn) {
+            if (Array.isArray(course.whatYouWillLearn)) {
+              objs = course.whatYouWillLearn;
+            } else if (typeof course.whatYouWillLearn === 'string') {
+              objs = course.whatYouWillLearn
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+            }
+          }
+          if (objs.length > 0) setObjectives(objs);
+
+          // Resolve Requirements
+          if (Array.isArray(course.requirements) && course.requirements.length > 0) {
+            setRequirements(course.requirements);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading course details:', err);
+        toast.error('Failed to load course details for editing');
+      } finally {
+        setLoadingCourse(false);
+      }
+    };
+
+    if (isEditMode) {
+      fetchCourseDetails();
+    }
+  }, [targetCourseId, isEditMode, setValue]);
 
   const handleAddObjective = () => setObjectives([...objectives, '']);
   const handleRemoveObjective = (index) => {
@@ -103,18 +168,38 @@ const CreateCourse = () => {
         requirements: filteredRequirements,
       };
 
-      const response = await api.post('/courses', payload);
-      if (response.data.success) {
-        const createdCourse = response.data.data;
-        toast.success('Course basic info saved! Now manage curriculum sections & lessons. 🎉');
-        navigate(`/instructor/courses/${createdCourse._id}/lessons`);
+      if (isEditMode) {
+        // Submit Update
+        const response = await api.put(`/courses/${targetCourseId}`, payload);
+        if (response.data && (response.data.success || response.status === 200)) {
+          toast.success('Course details updated successfully! 🎉');
+          navigate('/instructor/courses');
+        }
+      } else {
+        // Submit Create
+        const response = await api.post('/courses', payload);
+        if (response.data && response.data.success) {
+          const createdCourse = response.data.data;
+          toast.success('Course basic info saved! Now manage curriculum sections & lessons. 🎉');
+          navigate(`/instructor/courses/${createdCourse._id}/lessons`);
+        }
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create course');
+      console.error('Course save error:', err);
+      toast.error(err.response?.data?.message || (isEditMode ? 'Failed to update course' : 'Failed to create course'));
     } finally {
       setLoading(false);
     }
   };
+
+  if (loadingCourse) {
+    return (
+      <div className="p-16 text-center bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl mx-auto my-12 text-white">
+        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-slate-400 text-sm font-semibold">Loading course specifications...</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -127,11 +212,16 @@ const CreateCourse = () => {
       <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl shadow-xl flex items-center justify-between">
         <div>
           <span className="inline-block px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
-            Step 1 of 2 • Course Details
+            {isEditMode ? 'Instructor Studio • Course Editor' : 'Step 1 of 2 • Course Details'}
           </span>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white">Create New Course</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
+            {isEditMode ? <FiEdit className="text-indigo-400" /> : <FiBookOpen className="text-indigo-400" />}
+            {isEditMode ? 'Edit Course Specifications' : 'Create New Course'}
+          </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Fill in the essential course information, pricing, and learning objectives.
+            {isEditMode
+              ? 'Update title, description, category, pricing, and objectives for this course.'
+              : 'Fill in the essential course information, pricing, and learning objectives.'}
           </p>
         </div>
 
@@ -319,13 +409,26 @@ const CreateCourse = () => {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2"
-        >
-          {loading ? 'Saving Course Details...' : 'Save & Manage Curriculum Lessons'} <FiArrowRight />
-        </button>
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <button
+            type="button"
+            onClick={() => navigate('/instructor/courses')}
+            className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2"
+          >
+            {loading
+              ? 'Saving Changes...'
+              : isEditMode
+              ? 'Save Course Changes ✓'
+              : 'Save & Manage Curriculum Lessons'} <FiArrowRight />
+          </button>
+        </div>
       </form>
     </motion.div>
   );
