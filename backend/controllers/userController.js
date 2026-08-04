@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Enrolment = require('../models/Enrolment');
+const QuizAttempt = require('../models/QuizAttempt');
 
 // @desc    Update user profile (Name and Avatar)
 // @route   PUT /api/users/profile OR PUT /api/auth/profile
@@ -166,8 +168,92 @@ const getWatchlist = async (req, res) => {
   }
 };
 
+// @desc    Get Dynamic Real-Time Student Dashboard Overview Stats
+// @route   GET /api/users/dashboard-stats OR GET /api/student/dashboard-stats
+// @access  Private (Student)
+const getStudentDashboardStats = async (req, res) => {
+  try {
+    const studentId = req.user._id;
+
+    // 1. Fetch Enrolled Courses Count
+    const enrolments = await Enrolment.find({
+      $or: [{ studentId: studentId }, { student: studentId }],
+    }).populate('courseId');
+
+    const enrolledCount = enrolments.length;
+
+    // 2. Completed Courses Count (progressPercentage === 100 or completedLessons count)
+    const completedCount = enrolments.filter(
+      (e) => (e.progressPercentage || e.progress || 0) >= 100 || e.isCompleted
+    ).length;
+
+    // 3. Dynamic Hours Spent Calculation
+    // Calculate based on completed lessons or total course duration watched
+    let totalMinutesSpent = 0;
+    enrolments.forEach((enrol) => {
+      const progressPercentage = enrol.progressPercentage || enrol.progress || 0;
+      const course = enrol.courseId || enrol.course;
+      const courseDurationMinutes = course?.totalDurationMinutes || 180; // Default 3 hrs per course if not specified
+      totalMinutesSpent += (courseDurationMinutes * (progressPercentage / 100));
+
+      if (enrol.completedLessons && enrol.completedLessons.length > 0) {
+        totalMinutesSpent += enrol.completedLessons.length * 20; // 20 mins per completed lesson
+      }
+    });
+    const hoursSpent = Math.max(0, parseFloat((totalMinutesSpent / 60).toFixed(1)));
+
+    // 4. Dynamic Quiz Average Score Calculation
+    const quizSubmissions = await QuizAttempt.find({
+      $or: [{ studentId: studentId }, { student: studentId }],
+    });
+
+    let quizAvgScore = 0;
+
+    if (quizSubmissions.length > 0) {
+      const totalScorePercentage = quizSubmissions.reduce((acc, curr) => {
+        let percentage = curr.scorePercentage;
+        if (percentage === undefined || percentage === null) {
+          if (curr.totalMarks && curr.totalMarks > 0) {
+            percentage = (curr.obtainedMarks / curr.totalMarks) * 100;
+          } else if (curr.totalQuestions && curr.totalQuestions > 0) {
+            percentage = (curr.correctAnswersCount / curr.totalQuestions) * 100;
+          } else {
+            percentage = 0;
+          }
+        }
+        return acc + percentage;
+      }, 0);
+
+      quizAvgScore = parseFloat((totalScorePercentage / quizSubmissions.length).toFixed(1));
+    }
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        enrolledCourses: enrolledCount,
+        completedCourses: completedCount,
+        hoursSpent,
+        quizAvgScore,
+      },
+      data: {
+        enrolledCourses: enrolledCount,
+        completedCourses: completedCount,
+        hoursSpent,
+        quizAvgScore,
+      },
+    });
+  } catch (error) {
+    console.error('🔥 Error fetching student stats:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to calculate student statistics',
+    });
+  }
+};
+
 module.exports = {
   updateUserProfile,
   toggleWatchlist,
   getWatchlist,
+  getStudentDashboardStats,
 };

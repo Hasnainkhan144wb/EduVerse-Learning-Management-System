@@ -19,17 +19,31 @@ const StudentDashboard = () => {
 
   const [enrolments, setEnrolments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    enrolledCourses: 0,
+    completedCourses: 0,
+    hoursSpent: 0,
+    quizAvgScore: 0,
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/enrolments/my-courses').catch(() => null);
-        if (response && response.data) {
-          const list = response.data.courses || response.data.data || (Array.isArray(response.data) ? response.data : []);
+        const [enrolRes, statsRes] = await Promise.all([
+          api.get('/enrolments/my-courses').catch(() => null),
+          api.get('/student/dashboard-stats').catch(() => null),
+        ]);
+
+        if (enrolRes && enrolRes.data) {
+          const list = enrolRes.data.courses || enrolRes.data.data || (Array.isArray(enrolRes.data) ? enrolRes.data : []);
           setEnrolments(list);
         } else {
           setEnrolments([]);
+        }
+
+        if (statsRes && statsRes.data && statsRes.data.success) {
+          setStats(statsRes.data.stats || statsRes.data.data || {});
         }
       } catch (err) {
         console.error('Error loading student dashboard:', err);
@@ -82,7 +96,9 @@ const StudentDashboard = () => {
           </div>
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase">Enrolled Courses</p>
-            <p className="text-2xl font-extrabold text-white mt-0.5">{enrolments.length}</p>
+            <p className="text-2xl font-extrabold text-white mt-0.5">
+              {stats.enrolledCourses !== undefined ? stats.enrolledCourses : enrolments.length}
+            </p>
           </div>
         </div>
 
@@ -92,7 +108,9 @@ const StudentDashboard = () => {
           </div>
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase">Hours Spent</p>
-            <p className="text-2xl font-extrabold text-white mt-0.5">34.5 hrs</p>
+            <p className="text-2xl font-extrabold text-white mt-0.5">
+              {stats.hoursSpent || 0} hrs
+            </p>
           </div>
         </div>
 
@@ -102,7 +120,9 @@ const StudentDashboard = () => {
           </div>
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase">Completed Courses</p>
-            <p className="text-2xl font-extrabold text-white mt-0.5">{completedCount}</p>
+            <p className="text-2xl font-extrabold text-white mt-0.5">
+              {stats.completedCourses !== undefined ? stats.completedCourses : completedCount}
+            </p>
           </div>
         </div>
 
@@ -112,7 +132,9 @@ const StudentDashboard = () => {
           </div>
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase">Quiz Avg. Score</p>
-            <p className="text-2xl font-extrabold text-white mt-0.5">88.5%</p>
+            <p className="text-2xl font-extrabold text-white mt-0.5">
+              {stats.quizAvgScore || 0}%
+            </p>
           </div>
         </div>
       </div>
