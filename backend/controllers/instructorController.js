@@ -291,6 +291,7 @@ const getInstructorAnalytics = async (req, res, next) => {
 const getInstructorCourses = async (req, res, next) => {
   try {
     const instructorId = req.user._id;
+    const Enrolment = require('../models/Enrolment');
 
     const courses = await Course.find({
       $or: [
@@ -302,13 +303,29 @@ const getInstructorCourses = async (req, res, next) => {
       ],
     })
       .populate('categoryRef', 'name slug')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const coursesWithRealCounts = await Promise.all(
+      courses.map(async (course) => {
+        const studentCount = await Enrolment.countDocuments({
+          $or: [{ courseId: course._id }, { course: course._id }],
+        });
+        return {
+          ...course,
+          enrolledCount: studentCount,
+          studentsEnrolled: studentCount,
+          totalStudents: studentCount,
+          studentsCount: studentCount,
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,
-      count: courses.length,
-      courses,
-      data: courses,
+      count: coursesWithRealCounts.length,
+      courses: coursesWithRealCounts,
+      data: coursesWithRealCounts,
     });
   } catch (error) {
     console.error('🔥 Error fetching instructor courses:', error);

@@ -150,8 +150,13 @@ const InstructorCourses = () => {
                 {/* Pricing & Enrolled Bar */}
                 <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
                   <div className="flex items-center gap-1.5 text-slate-300 font-semibold">
-                    <FiUsers className="text-indigo-400" />
-                    <span>{course.enrolledStudentsCount || 0} Students</span>
+                    <span>👥</span>
+                    <span>
+                      {course.enrolledCount !== undefined
+                        ? course.enrolledCount
+                        : (course.studentsEnrolled || course.enrolledStudentsCount || 0)}{' '}
+                      Students
+                    </span>
                   </div>
                   <div className="text-emerald-400 font-extrabold text-sm">
                     {course.price === 0 ? 'Free' : `$${course.price || 49.99}`}

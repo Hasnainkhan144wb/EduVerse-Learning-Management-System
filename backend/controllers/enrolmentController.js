@@ -67,6 +67,11 @@ const enrolStudent = async (req, res, next) => {
       $addToSet: { enrolledCourses: courseId },
     });
 
+    // Increment studentsEnrolled / enrolledCount on Course model as secondary fallback
+    await Course.findByIdAndUpdate(courseId, {
+      $inc: { studentsEnrolled: 1, enrolledCount: 1 },
+    });
+
     res.status(201).json({
       success: true,
       message: 'Successfully enrolled in course',

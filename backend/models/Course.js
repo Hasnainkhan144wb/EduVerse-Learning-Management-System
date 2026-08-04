@@ -70,6 +70,16 @@ const courseSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    studentsEnrolled: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    enrolledCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,
