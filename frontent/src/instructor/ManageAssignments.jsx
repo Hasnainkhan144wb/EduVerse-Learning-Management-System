@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { getFileUrl } from '../utils/getFileUrl';
 import {
   FiFileText,
   FiPlus,
@@ -355,6 +356,7 @@ const ManageAssignments = () => {
                   <div className="space-y-4">
                     {submissions.map((sub) => {
                       const currentGrade = gradingState[sub._id] || { marks: 0, feedback: '' };
+                      const submissionFile = sub.documentUrl || sub.solutionUrl || sub.fileUrl;
 
                       return (
                         <div
@@ -394,16 +396,21 @@ const ManageAssignments = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <p className="text-xs font-semibold text-slate-400 mb-1">
-                                Submitted File
+                                Submitted File / Link
                               </p>
-                              <a
-                                href={sub.fileUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl text-xs font-bold text-indigo-400 transition"
-                              >
-                                <FiDownload /> Download Submitted Document
-                              </a>
+                              {submissionFile ? (
+                                <a
+                                  href={getFileUrl(submissionFile)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+                                >
+                                  <FiDownload /> Download Submitted Document ({sub.notes || sub.studentNotes || 'Attached File'})
+                                </a>
+                              ) : (
+                                <p className="text-xs text-slate-400 italic">No document file attached for this submission.</p>
+                              )}
                             </div>
 
                             {sub.notes && (
@@ -433,7 +440,7 @@ const ManageAssignments = () => {
                                   type="number"
                                   min="0"
                                   max={assignment.totalMarks}
-                                  value={currentGrade.marks}
+                                  value={currentGrade.marks !== null && currentGrade.marks !== undefined ? currentGrade.marks : ''}
                                   onChange={(e) =>
                                     setGradingState({
                                       ...gradingState,
@@ -454,7 +461,7 @@ const ManageAssignments = () => {
                                 <input
                                   type="text"
                                   placeholder="Great work! Well formatted code and clean documentation..."
-                                  value={currentGrade.feedback}
+                                  value={currentGrade.feedback !== null && currentGrade.feedback !== undefined ? currentGrade.feedback : ''}
                                   onChange={(e) =>
                                     setGradingState({
                                       ...gradingState,
