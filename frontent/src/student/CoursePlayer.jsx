@@ -67,6 +67,74 @@ const CoursePlayer = () => {
   const [assignmentData, setAssignmentData] = useState(null);
   const { register, handleSubmit, reset } = useForm();
 
+  // Real-Time Active Learning Time Tracking System
+  const secondsBufferRef = useRef(0);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
+
+  useEffect(() => {
+    if (!courseId || !activeLesson) return;
+
+    const flushTime = async () => {
+      const secondsToFlush = secondsBufferRef.current;
+      if (secondsToFlush > 0) {
+        secondsBufferRef.current = 0;
+        try {
+          await api.post('/enrolments/track-time', {
+            courseId,
+            lessonId: activeLesson._id,
+            lessonType: activeLesson.type || 'video',
+            secondsSpent: secondsToFlush,
+          });
+        } catch (err) {
+          secondsBufferRef.current += secondsToFlush;
+        }
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      const isVisible = document.visibilityState === 'visible';
+      const isFocused = document.hasFocus ? document.hasFocus() : true;
+      const type = (activeLesson.type || 'video').toLowerCase();
+
+      // Active condition: Tab visible & window focused
+      if (isVisible && isFocused) {
+        if (type === 'video') {
+          if (isVideoPlaying) {
+            secondsBufferRef.current += 1;
+          }
+        } else {
+          // PDF, assignment, reading: active reading time
+          secondsBufferRef.current += 1;
+        }
+      }
+
+      // Flush accumulated active time to MongoDB every 15 seconds
+      if (secondsBufferRef.current >= 15) {
+        flushTime();
+      }
+    }, 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') {
+        flushTime();
+      }
+    };
+
+    const handleBlur = () => {
+      flushTime();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      flushTime();
+    };
+  }, [courseId, activeLesson, isVideoPlaying]);
+
   // Load course details & enrolment progress
   const fetchCourseDetails = useCallback(async () => {
     try {
@@ -493,7 +561,12 @@ const CoursePlayer = () => {
                       ref={videoRef}
                       src={getEmbedUrl(activeLesson.videoUrl)}
                       controls
-                      onEnded={handleVideoEnded}
+                      onPlay={() => setIsVideoPlaying(true)}
+                      onPause={() => setIsVideoPlaying(false)}
+                      onEnded={() => {
+                        setIsVideoPlaying(false);
+                        handleVideoEnded();
+                      }}
                       className="w-full h-full object-contain"
                     />
                   )

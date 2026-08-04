@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { formatLearningTime } from '../utils/formatLearningTime';
 import {
   FiBookOpen,
   FiClock,
@@ -22,6 +23,7 @@ const StudentDashboard = () => {
   const [stats, setStats] = useState({
     enrolledCourses: 0,
     completedCourses: 0,
+    totalMinutes: 0,
     hoursSpent: 0,
     quizAvgScore: 0,
   });
@@ -107,9 +109,9 @@ const StudentDashboard = () => {
             <FiClock />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase">Hours Spent</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase">Learning Time</p>
             <p className="text-2xl font-extrabold text-white mt-0.5">
-              {stats.hoursSpent || 0} hrs
+              {formatLearningTime(stats.totalMinutes !== undefined ? stats.totalMinutes : Math.round((stats.hoursSpent || 0) * 60))}
             </p>
           </div>
         </div>

@@ -56,6 +56,8 @@ const enrolStudent = async (req, res, next) => {
       courseId,
       progressPercentage: 0,
       completedLessons: [],
+      totalSecondsSpent: 0,
+      learningSessions: [],
     });
 
     // Add courseId to user's enrolledCourses array
@@ -184,6 +186,76 @@ const markLessonComplete = async (req, res, next) => {
   }
 };
 
+// @desc    Track real-time active learning time (Video, PDF, Quiz, Assignment)
+// @route   POST /api/enrolments/track-time
+// @access  Private (Student)
+const trackLearningTime = async (req, res, next) => {
+  try {
+    const { courseId, lessonId, lessonType = 'video', secondsSpent = 0 } = req.body;
+    const studentId = req.user._id;
+
+    if (!courseId || secondsSpent <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide courseId and valid secondsSpent > 0',
+      });
+    }
+
+    // Sanitize max bulk seconds per ping (e.g. max 120 seconds per single update ping)
+    const sanitizedSeconds = Math.min(Math.max(1, Number(secondsSpent)), 120);
+
+    let enrolment = await Enrolment.findOne({
+      $or: [
+        { studentId, courseId },
+        { student: studentId, course: courseId },
+      ],
+    });
+
+    if (!enrolment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrolment record not found',
+      });
+    }
+
+    if (!enrolment.totalSecondsSpent) enrolment.totalSecondsSpent = 0;
+    if (!enrolment.learningSessions) enrolment.learningSessions = [];
+
+    enrolment.totalSecondsSpent += sanitizedSeconds;
+    enrolment.totalMinutes = Math.round(enrolment.totalSecondsSpent / 60);
+
+    if (lessonId) {
+      const sessionIndex = enrolment.learningSessions.findIndex(
+        (s) => s.lessonId && s.lessonId.toString() === lessonId.toString()
+      );
+
+      if (sessionIndex > -1) {
+        enrolment.learningSessions[sessionIndex].secondsSpent += sanitizedSeconds;
+        enrolment.learningSessions[sessionIndex].lastActiveAt = new Date();
+      } else {
+        enrolment.learningSessions.push({
+          lessonId,
+          lessonType,
+          secondsSpent: sanitizedSeconds,
+          lastActiveAt: new Date(),
+        });
+      }
+    }
+
+    await enrolment.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Active learning time recorded successfully',
+      totalSecondsSpent: enrolment.totalSecondsSpent,
+      totalHoursSpent: parseFloat((enrolment.totalSecondsSpent / 3600).toFixed(1)),
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get all students enrolled in instructor's courses
 // @route   GET /api/enrolments/instructor/students OR GET /api/instructor/students
 // @access  Private (Instructor/Admin)
@@ -229,5 +301,6 @@ module.exports = {
   getMyEnrolments,
   getEnrolmentProgress,
   markLessonComplete,
+  trackLearningTime,
   getInstructorStudents,
 };

@@ -188,24 +188,35 @@ const getStudentDashboardStats = async (req, res) => {
     ).length;
 
     // 3. Dynamic Hours Spent Calculation
-    // Calculate based on completed lessons or total course duration watched
-    let totalMinutesSpent = 0;
+    let totalSecondsSpentAll = 0;
     enrolments.forEach((enrol) => {
-      const progressPercentage = enrol.progressPercentage || enrol.progress || 0;
-      const course = enrol.courseId || enrol.course;
-      const courseDurationMinutes = course?.totalDurationMinutes || 180; // Default 3 hrs per course if not specified
-      totalMinutesSpent += (courseDurationMinutes * (progressPercentage / 100));
-
-      if (enrol.completedLessons && enrol.completedLessons.length > 0) {
-        totalMinutesSpent += enrol.completedLessons.length * 20; // 20 mins per completed lesson
+      if (enrol.totalSecondsSpent && enrol.totalSecondsSpent > 0) {
+        totalSecondsSpentAll += enrol.totalSecondsSpent;
+      } else {
+        // Fallback: estimate from progress percentage if no active tracking recorded yet
+        const progressPercentage = enrol.progressPercentage || enrol.progress || 0;
+        const course = enrol.courseId || enrol.course;
+        const courseDurationMinutes = course?.totalDurationMinutes || 180;
+        totalSecondsSpentAll += (courseDurationMinutes * 60 * (progressPercentage / 100));
+        if (enrol.completedLessons && enrol.completedLessons.length > 0) {
+          totalSecondsSpentAll += enrol.completedLessons.length * 1200;
+        }
       }
     });
-    const hoursSpent = Math.max(0, parseFloat((totalMinutesSpent / 60).toFixed(1)));
 
-    // 4. Dynamic Quiz Average Score Calculation
+    // 4. Dynamic Quiz Average Score Calculation & Time Spent
     const quizSubmissions = await QuizAttempt.find({
       $or: [{ studentId: studentId }, { student: studentId }],
     });
+
+    quizSubmissions.forEach((q) => {
+      if (q.timeTakenSeconds && q.timeTakenSeconds > 0) {
+        totalSecondsSpentAll += q.timeTakenSeconds;
+      }
+    });
+
+    const totalMinutes = Math.max(0, Math.round(totalSecondsSpentAll / 60));
+    const hoursSpent = Math.max(0, parseFloat((totalSecondsSpentAll / 3600).toFixed(1)));
 
     let quizAvgScore = 0;
 
@@ -232,12 +243,14 @@ const getStudentDashboardStats = async (req, res) => {
       stats: {
         enrolledCourses: enrolledCount,
         completedCourses: completedCount,
+        totalMinutes,
         hoursSpent,
         quizAvgScore,
       },
       data: {
         enrolledCourses: enrolledCount,
         completedCourses: completedCount,
+        totalMinutes,
         hoursSpent,
         quizAvgScore,
       },

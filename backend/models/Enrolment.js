@@ -24,6 +24,34 @@ const enrolmentSchema = new mongoose.Schema(
         ref: 'Lesson',
       },
     ],
+    totalSecondsSpent: {
+      type: Number,
+      default: 0,
+    },
+    totalMinutes: {
+      type: Number,
+      default: 0,
+    },
+    learningSessions: [
+      {
+        lessonId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Lesson',
+        },
+        lessonType: {
+          type: String,
+          default: 'video',
+        },
+        secondsSpent: {
+          type: Number,
+          default: 0,
+        },
+        lastActiveAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
