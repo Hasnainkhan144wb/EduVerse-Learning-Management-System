@@ -29,6 +29,18 @@ const lessonSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    description: {
+      type: String,
+      default: '',
+    },
+    attachmentUrl: {
+      type: String,
+      default: '',
+    },
+    resourceLink: {
+      type: String,
+      default: '',
+    },
     sourceCode: {
       type: String,
       default: '',

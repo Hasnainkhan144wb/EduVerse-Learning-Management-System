@@ -45,8 +45,11 @@ const ManageLessons = () => {
     type: 'video',
     videoUrl: '',
     pdfUrl: '',
+    attachmentUrl: '',
     notes: '',
+    description: '',
     sourceCode: '',
+    resourceLink: '',
   });
 
   const [expandedSections, setExpandedSections] = useState({});
@@ -148,8 +151,11 @@ const ManageLessons = () => {
       type: 'video',
       videoUrl: '',
       pdfUrl: '',
+      attachmentUrl: '',
       notes: '',
+      description: '',
       sourceCode: '',
+      resourceLink: '',
     });
     setLessonModalOpen(true);
   };
@@ -157,14 +163,23 @@ const ManageLessons = () => {
   const handleOpenEditLesson = (lesson) => {
     setSelectedSectionId(lesson.sectionId);
     setEditingLesson(lesson);
-    setPdfFileName(lesson.pdfUrl ? (lesson.pdfUrl.startsWith('data:') ? 'Uploaded_Document.pdf' : '') : '');
+    setPdfFileName(
+      lesson.pdfUrl || lesson.attachmentUrl
+        ? (lesson.pdfUrl || lesson.attachmentUrl).startsWith('data:')
+          ? 'Uploaded_Document'
+          : ''
+        : ''
+    );
     setLessonForm({
       title: lesson.title || '',
       type: lesson.type || 'video',
       videoUrl: lesson.videoUrl || '',
-      pdfUrl: lesson.pdfUrl || '',
-      notes: lesson.notes || '',
-      sourceCode: lesson.sourceCode || '',
+      pdfUrl: lesson.pdfUrl || lesson.attachmentUrl || '',
+      attachmentUrl: lesson.attachmentUrl || lesson.pdfUrl || '',
+      notes: lesson.notes || lesson.description || '',
+      description: lesson.description || lesson.notes || '',
+      sourceCode: lesson.sourceCode || lesson.resourceLink || '',
+      resourceLink: lesson.resourceLink || lesson.sourceCode || '',
     });
     setLessonModalOpen(true);
   };
@@ -173,21 +188,15 @@ const ManageLessons = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-      toast.error('Please upload a valid PDF document (.pdf)');
-      return;
-    }
-
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error('PDF file size must be under 15MB');
-      return;
-    }
-
+    setPdfFileName(file.name);
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPdfFileName(file.name);
-      setLessonForm((prev) => ({ ...prev, pdfUrl: reader.result }));
-      toast.success(`PDF "${file.name}" attached successfully! 📄`);
+      setLessonForm((prev) => ({
+        ...prev,
+        pdfUrl: reader.result,
+        attachmentUrl: reader.result,
+      }));
+      toast.success(`Attached ${file.name}!`);
     };
     reader.readAsDataURL(file);
   };
@@ -603,20 +612,17 @@ const ManageLessons = () => {
                 )}
 
                 {lessonForm.type === 'pdf' && (
-                  <div className="space-y-3">
-                    <label className="block text-xs font-semibold text-slate-300">
-                      PDF Document Attachment (File Upload or External URL)
+                  <div className="p-4 bg-slate-950 rounded-2xl border border-dashed border-indigo-500/40 space-y-3">
+                    <label className="block text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      📄 PDF Document Attachment (File Upload or External URL)
                     </label>
-
-                    {/* Dual Choice: Direct File Upload or URL Fallback */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Direct PDF File Upload Input */}
-                      <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
                         <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
                           <FiUploadCloud className="text-indigo-400" /> Direct PDF File Upload
                         </span>
                         <label className="cursor-pointer px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg text-xs font-bold text-center transition flex items-center justify-center gap-1.5">
-                          <FiUploadCloud className="w-4 h-4" /> Browse PDF File
+                          <FiUploadCloud className="w-4 h-4" /> Browse PDF
                           <input
                             type="file"
                             accept="application/pdf"
@@ -626,10 +632,9 @@ const ManageLessons = () => {
                         </label>
                       </div>
 
-                      {/* URL Fallback Input */}
-                      <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
                         <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                          <FiFileText className="text-blue-400" /> External PDF URL Fallback
+                          <FiFileText className="text-blue-400" /> PDF Document URL
                         </span>
                         <input
                           type="text"
@@ -637,14 +642,13 @@ const ManageLessons = () => {
                           value={pdfFileName ? '' : lessonForm.pdfUrl}
                           onChange={(e) => {
                             setPdfFileName('');
-                            setLessonForm({ ...lessonForm, pdfUrl: e.target.value });
+                            setLessonForm({ ...lessonForm, pdfUrl: e.target.value, attachmentUrl: e.target.value });
                           }}
-                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                          className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                         />
                       </div>
                     </div>
 
-                    {/* Selected PDF Badge Display */}
                     {pdfFileName && (
                       <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-400">
                         <span className="flex items-center gap-1.5 font-bold truncate">
@@ -654,7 +658,7 @@ const ManageLessons = () => {
                           type="button"
                           onClick={() => {
                             setPdfFileName('');
-                            setLessonForm({ ...lessonForm, pdfUrl: '' });
+                            setLessonForm({ ...lessonForm, pdfUrl: '', attachmentUrl: '' });
                           }}
                           className="p-1 hover:text-red-400 text-emerald-400 transition"
                           title="Remove PDF"
@@ -663,6 +667,94 @@ const ManageLessons = () => {
                         </button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {lessonForm.type === 'assignment' && (
+                  <div className="space-y-4">
+                    {/* Instructions & Description Textarea */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
+                        <FiEdit className="text-amber-400" /> Assignment Instructions & Requirements
+                      </label>
+                      <textarea
+                        rows={4}
+                        placeholder="Enter assignment requirements, guidelines, deliverables, or problem statement..."
+                        value={lessonForm.description || lessonForm.notes}
+                        onChange={(e) =>
+                          setLessonForm({
+                            ...lessonForm,
+                            description: e.target.value,
+                            notes: e.target.value,
+                          })
+                        }
+                        className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    {/* Attachment File / Document Link */}
+                    <div className="p-4 bg-slate-950 rounded-2xl border border-dashed border-amber-500/40 space-y-3">
+                      <label className="block text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        📄 Attach Assignment Document (PDF / DOCX / ZIP File Link)
+                      </label>
+                      <p className="text-[11px] text-slate-400">
+                        Upload a PDF problem statement, project prompt, or paste document URL.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
+                          <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                            <FiUploadCloud className="text-amber-400" /> Upload File
+                          </span>
+                          <label className="cursor-pointer px-3 py-2 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 rounded-lg text-xs font-bold text-center transition flex items-center justify-center gap-1.5">
+                            <FiUploadCloud className="w-4 h-4" /> Browse Document
+                            <input
+                              type="file"
+                              accept=".pdf,.docx,.doc,.zip"
+                              onChange={handlePdfFileUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-col justify-between space-y-2">
+                          <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                            <FiFileText className="text-indigo-400" /> Document File URL
+                          </span>
+                          <input
+                            type="text"
+                            placeholder="https://.../assignment.pdf"
+                            value={lessonForm.attachmentUrl || lessonForm.pdfUrl || ''}
+                            onChange={(e) =>
+                              setLessonForm({
+                                ...lessonForm,
+                                attachmentUrl: e.target.value,
+                                pdfUrl: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      {pdfFileName && (
+                        <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-400">
+                          <span className="flex items-center gap-1.5 font-bold truncate">
+                            <FiCheckCircle className="shrink-0" /> ✓ {pdfFileName}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPdfFileName('');
+                              setLessonForm({ ...lessonForm, attachmentUrl: '', pdfUrl: '' });
+                            }}
+                            className="p-1 hover:text-red-400 text-emerald-400 transition"
+                            title="Remove File"
+                          >
+                            <FiX className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
