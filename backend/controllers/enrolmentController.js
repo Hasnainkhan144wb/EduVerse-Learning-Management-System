@@ -10,9 +10,13 @@ const { createReviewReminderNotification } = require('./notificationController')
 // @access  Private (Student/Admin/Instructor)
 const enrolStudent = async (req, res, next) => {
   try {
-    const { courseId } = req.params;
+    const targetCourseId = req.params.courseId || req.body.courseId;
     const studentId = req.user._id;
     const userRole = req.user.role;
+
+    if (!targetCourseId) {
+      return res.status(400).json({ success: false, message: 'Course ID is required for enrolment' });
+    }
 
     // 1. Role Guard: Instructors & Admins cannot enroll as students
     if (userRole === 'Instructor' || userRole === 'Admin') {
@@ -22,7 +26,7 @@ const enrolStudent = async (req, res, next) => {
       });
     }
 
-    const course = await Course.findById(courseId);
+    const course = await Course.findById(targetCourseId);
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
@@ -39,8 +43,8 @@ const enrolStudent = async (req, res, next) => {
     // 3. Check if already enrolled
     const existingEnrolment = await Enrolment.findOne({
       $or: [
-        { studentId, courseId },
-        { student: studentId, course: courseId },
+        { studentId, courseId: targetCourseId },
+        { student: studentId, course: targetCourseId },
       ],
     });
 
@@ -55,7 +59,7 @@ const enrolStudent = async (req, res, next) => {
     // Create Enrolment record
     const enrolment = await Enrolment.create({
       studentId,
-      courseId,
+      courseId: targetCourseId,
       progressPercentage: 0,
       completedLessons: [],
       totalSecondsSpent: 0,
@@ -64,11 +68,11 @@ const enrolStudent = async (req, res, next) => {
 
     // Add courseId to user's enrolledCourses array
     await User.findByIdAndUpdate(studentId, {
-      $addToSet: { enrolledCourses: courseId },
+      $addToSet: { enrolledCourses: targetCourseId },
     });
 
     // Increment studentsEnrolled / enrolledCount on Course model as secondary fallback
-    await Course.findByIdAndUpdate(courseId, {
+    await Course.findByIdAndUpdate(targetCourseId, {
       $inc: { studentsEnrolled: 1, enrolledCount: 1 },
     });
 

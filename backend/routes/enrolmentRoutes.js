@@ -17,6 +17,7 @@ router.post('/track-time', protect, trackLearningTime);
 router.get('/my-courses', protect, getMyEnrolments);
 router.get('/instructor/students', protect, authorize('Instructor', 'Admin'), getInstructorStudents);
 router.get('/course/:courseId', protect, getEnrolmentProgress);
+router.post('/', protect, enrolStudent);
 router.post('/:courseId', protect, enrolStudent);
 
 module.exports = router;
