@@ -36,6 +36,7 @@ router.post('/login', adminLogin);
 
 // Protected Admin Routes (Strictly Enforced by requireAdmin Middleware)
 router.get('/dashboard-stats', requireAdmin, getDashboardStats);
+router.get('/stats', requireAdmin, getDashboardStats);
 router.get('/pending-users', requireAdmin, getPendingUsers);
 router.get('/analytics', requireAdmin, getPlatformAnalytics);
 router.get('/reports/financial', requireAdmin, getFinancialReport);

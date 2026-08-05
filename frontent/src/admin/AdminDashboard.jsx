@@ -62,12 +62,23 @@ const AdminDashboard = () => {
     try {
       setLoadingStats(true);
       const [statsRes, pendingRes] = await Promise.all([
-        api.get('/admin/dashboard-stats').catch(() => null),
+        api.get('/admin/dashboard-stats').catch(() => api.get('/admin/stats').catch(() => null)),
         api.get('/admin/pending-users').catch(() => null),
       ]);
 
       if (statsRes && statsRes.data && statsRes.data.success) {
-        setStats(statsRes.data.data);
+        const statsPayload = statsRes.data.stats || statsRes.data.data || {};
+        setStats({
+          totalRevenue: statsPayload.totalRevenue || 0,
+          totalStudents: statsPayload.totalStudents || 0,
+          totalInstructors: statsPayload.totalInstructors || 0,
+          pendingInstructors: statsPayload.pendingInstructors || 0,
+          pendingUsers: statsPayload.pendingUsers !== undefined ? statsPayload.pendingUsers : statsPayload.pendingInstructors || 0,
+          pendingApprovals: statsPayload.pendingApprovals || 0,
+          publishedCourses: statsPayload.publishedCourses || 0,
+          totalCourses: statsPayload.totalCourses || 0,
+          totalEnrolments: statsPayload.totalEnrolments || 0,
+        });
       }
 
       if (pendingRes && pendingRes.data && pendingRes.data.success) {

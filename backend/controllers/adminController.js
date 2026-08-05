@@ -20,6 +20,7 @@ let platformSettings = {
 // @access  Private (Admin Only)
 const getDashboardStats = async (req, res, next) => {
   try {
+    // 1. Core Platform Counts
     const [
       totalStudents,
       totalInstructors,
@@ -27,36 +28,120 @@ const getDashboardStats = async (req, res, next) => {
       pendingUsersCount,
       totalCourses,
       publishedCourses,
+      pendingApprovals,
       totalEnrolments,
     ] = await Promise.all([
-      User.countDocuments({ role: 'Student' }),
-      User.countDocuments({ role: 'Instructor' }),
-      User.countDocuments({ role: 'Instructor', $or: [{ isApproved: false }, { status: 'Pending' }] }),
-      User.countDocuments({ $or: [{ status: 'Pending' }, { isApproved: false }], role: { $ne: 'Admin' } }),
-      Course.countDocuments(),
-      Course.countDocuments({ status: 'Published' }),
-      Enrolment.countDocuments(),
+      User.countDocuments({ role: { $regex: /^student$/i } }).catch(() => 0),
+      User.countDocuments({ role: { $regex: /^instructor$/i } }).catch(() => 0),
+      User.countDocuments({ role: { $regex: /^instructor$/i }, $or: [{ isApproved: false }, { status: 'Pending' }] }).catch(() => 0),
+      User.countDocuments({ $or: [{ status: 'Pending' }, { isApproved: false }], role: { $ne: 'Admin' } }).catch(() => 0),
+      Course.countDocuments().catch(() => 0),
+      Course.countDocuments({ $or: [{ status: 'Published' }, { isPublished: true }] }).catch(() => 0),
+      Course.countDocuments({ status: 'Pending' }).catch(() => 0),
+      Enrolment.countDocuments().catch(() => 0),
     ]);
 
-    // Estimated revenue calculation
-    const totalRevenue = totalEnrolments * 49.99;
+    // 2. MongoDB Aggregation Pipeline for Total Revenue Calculation
+    let calculatedRevenue = 0;
+    try {
+      const revenueAggregation = await Enrolment.aggregate([
+        {
+          $lookup: {
+            from: 'courses',
+            localField: 'courseId',
+            foreignField: '_id',
+            as: 'courseDetails1',
+          },
+        },
+        {
+          $lookup: {
+            from: 'courses',
+            localField: 'course',
+            foreignField: '_id',
+            as: 'courseDetails2',
+          },
+        },
+        {
+          $project: {
+            matchedCourse: {
+              $arrayElemAt: [
+                { $concatArrays: ['$courseDetails1', '$courseDetails2'] },
+                0,
+              ],
+            },
+            paymentAmount: '$paymentInfo.amountPaid',
+            amountPaid: '$amountPaid',
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: {
+              $sum: {
+                $cond: [
+                  { $gt: ['$matchedCourse.price', 0] },
+                  '$matchedCourse.price',
+                  { $ifNull: ['$paymentAmount', { $ifNull: ['$amountPaid', 0] }] },
+                ],
+              },
+            },
+          },
+        },
+      ]);
 
-    res.status(200).json({
+      if (revenueAggregation && revenueAggregation.length > 0) {
+        calculatedRevenue = revenueAggregation[0].totalRevenue || 0;
+      }
+    } catch (aggErr) {
+      console.error('📢 Mongo Aggregation error fallback:', aggErr.message);
+      // Fallback via lean populate
+      const enrolments = await Enrolment.find().populate('courseId course').lean();
+      if (Array.isArray(enrolments)) {
+        enrolments.forEach((item) => {
+          if (!item) return;
+          const courseObj = item.courseId || item.course;
+          const price = courseObj?.price !== undefined ? courseObj.price : (item.paymentInfo?.amountPaid || item.amountPaid || 0);
+          calculatedRevenue += Number(price) || 0;
+        });
+      }
+    }
+
+    const statsPayload = {
+      totalRevenue: Number(parseFloat(calculatedRevenue.toFixed(2))) || 0,
+      totalEnrolments: totalEnrolments || 0,
+      totalStudents: totalStudents || 0,
+      totalInstructors: totalInstructors || 0,
+      pendingInstructors: pendingInstructors || 0,
+      pendingUsers: pendingUsersCount || 0,
+      pendingApprovals: pendingApprovals || 0,
+      publishedCourses: publishedCourses || 0,
+      totalCourses: totalCourses || 0,
+    };
+
+    return res.status(200).json({
       success: true,
-      data: {
-        totalStudents,
-        totalInstructors,
-        pendingInstructors,
-        pendingUsers: pendingUsersCount,
-        totalCourses,
-        publishedCourses,
-        totalEnrolments,
-        totalRevenue: Math.round(totalRevenue),
-      },
+      stats: statsPayload,
+      data: statsPayload,
     });
   } catch (error) {
-    if (typeof next === 'function') next(error);
-    else res.status(500).json({ success: false, message: error.message });
+    console.error('🔥 Native Mongo Aggregation Error:', error);
+    const fallbackStats = {
+      totalRevenue: 0,
+      totalEnrolments: 0,
+      totalStudents: 0,
+      totalInstructors: 0,
+      pendingInstructors: 0,
+      pendingUsers: 0,
+      pendingApprovals: 0,
+      publishedCourses: 0,
+      totalCourses: 0,
+    };
+    return res.status(200).json({
+      success: true,
+      stats: fallbackStats,
+      data: fallbackStats,
+      message: error.message,
+    });
   }
 };
 
