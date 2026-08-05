@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import BrowseCourses from './pages/BrowseCourses';
 import CourseDetails from './pages/CourseDetails';
 import ProfilePage from './pages/ProfilePage';
+import VerifyCertificate from './pages/VerifyCertificate';
 import AdminLogin from './pages/admin/AdminLogin';
 
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -72,6 +73,8 @@ function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/courses" element={<BrowseCourses />} />
       <Route path="/courses/:id" element={<CourseDetails />} />
+      <Route path="/verify-certificate/:certificateId" element={<VerifyCertificate />} />
+      <Route path="/verify/:certificateId" element={<VerifyCertificate />} />
 
       {/* Standalone Protected Profile */}
       <Route
