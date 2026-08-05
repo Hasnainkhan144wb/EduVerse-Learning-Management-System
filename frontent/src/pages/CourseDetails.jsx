@@ -246,32 +246,40 @@ const CourseDetails = () => {
         </div>
       </nav>
 
-      {/* HERO HEADER */}
-      <div className="bg-slate-900/80 border-b border-slate-800 py-12">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      {/* HERO HEADER - HIGH CONTRAST & VISIBILITY */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-12 border-b border-slate-800 relative overflow-hidden">
+        {/* Decorative background glow */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 md:px-6 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start relative z-10">
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center gap-3 text-xs">
-              <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full font-bold uppercase tracking-wider">
-                {course.categoryRef?.name || 'General Category'}
+            {/* BADGES ROW */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="px-3.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 font-bold text-xs uppercase tracking-wider rounded-lg backdrop-blur-sm shadow-sm">
+                {course.categoryRef?.name || course.category?.name || (typeof course.category === 'string' ? course.category : '') || 'MOBILE APP DEVELOPMENT'}
               </span>
-              <span className="text-slate-400 flex items-center gap-1">
+              <span className="px-3.5 py-1 bg-white/10 text-slate-200 font-semibold text-xs rounded-lg backdrop-blur-sm border border-white/10 flex items-center gap-1">
                 <FiGlobe /> {course.language || 'English'}
               </span>
-              <span className="text-slate-400 flex items-center gap-1">
-                <FiAward /> {course.level || 'Beginner'}
+              <span className="px-3.5 py-1 bg-white/10 text-slate-200 font-semibold text-xs rounded-lg backdrop-blur-sm border border-white/10 flex items-center gap-1">
+                <FiAward /> {course.level || course.skillLevel || 'Intermediate'}
               </span>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">
-              {course.title}
+            {/* MAIN COURSE TITLE */}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+              {course.title || 'Mobile App development'}
             </h1>
 
-            <p className="text-slate-300 text-base leading-relaxed">
-              {course.description}
+            {/* SUBTITLE / DESCRIPTION BRIEF */}
+            <p className="text-sm sm:text-base text-slate-300 font-medium max-w-2xl leading-relaxed">
+              {course.description || 'Comprehensive step-by-step masterclass course with practical examples and source code.'}
             </p>
 
-            <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-slate-300">
-              <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+            {/* RATING & INSTRUCTOR META */}
+            <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-slate-800/80 text-xs sm:text-sm">
+              {/* Rating */}
+              <div className="flex items-center gap-1.5 font-bold text-amber-400">
                 <div className="flex items-center">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <FiStar
@@ -284,17 +292,22 @@ const CourseDetails = () => {
                     />
                   ))}
                 </div>
-                <span className="text-white font-extrabold text-sm ml-1">
+                <span className="text-white ml-1 font-extrabold text-sm">
                   {averageRating || course.averageRating || 4.8}
                 </span>
-                <span className="text-slate-400 font-medium">
-                  ({totalReviews || course.totalReviews || reviews.length || 0} reviews)
+                <span className="text-slate-400 font-normal">
+                  ({totalReviews || course.totalReviews || (reviews ? reviews.length : 0)} reviews)
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 text-slate-400">
-                <FiUser className="text-indigo-400" />
-                <span>Instructor: {course.instructorRef?.name || 'EduVerse Faculty'}</span>
+              {/* Instructor Name */}
+              <div className="flex items-center gap-2 text-slate-300 font-medium">
+                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm">
+                  👤
+                </span>
+                <span>
+                  Instructor: <strong className="text-white">{course.instructorRef?.name || course.instructor?.name || 'Abdullah'}</strong>
+                </span>
               </div>
             </div>
           </div>
