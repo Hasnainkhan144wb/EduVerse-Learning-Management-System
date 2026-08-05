@@ -27,6 +27,7 @@ import Wishlist from './student/Wishlist';
 import Watchlist from './student/Watchlist';
 import Checkout from './student/Checkout';
 import StudentCertificates from './student/StudentCertificates';
+import CompletedCourses from './student/CompletedCourses';
 import StudentQnADiscussions from './pages/student/StudentQuestions';
 
 import InstructorDashboard from './instructor/InstructorDashboard';
@@ -132,6 +133,7 @@ function App() {
         <Route path="wishlist" element={<Watchlist />} />
         <Route path="watchlist" element={<Watchlist />} />
         <Route path="certificates" element={<StudentCertificates />} />
+        <Route path="completed-courses" element={<CompletedCourses />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 

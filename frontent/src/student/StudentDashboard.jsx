@@ -116,17 +116,22 @@ const StudentDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xl font-bold border border-emerald-500/30">
+        <Link
+          to="/student/completed-courses"
+          className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg hover:border-emerald-500/50 transition group cursor-pointer"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xl font-bold border border-emerald-500/30 group-hover:scale-105 transition-transform">
             <FiCheckCircle />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase">Completed Courses</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase group-hover:text-emerald-400 transition-colors">
+              Completed Courses →
+            </p>
             <p className="text-2xl font-extrabold text-white mt-0.5">
               {stats.completedCourses !== undefined ? stats.completedCourses : completedCount}
             </p>
           </div>
-        </div>
+        </Link>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-lg">
           <div className="w-12 h-12 rounded-2xl bg-amber-600/20 text-amber-400 flex items-center justify-center text-xl font-bold border border-amber-500/30">

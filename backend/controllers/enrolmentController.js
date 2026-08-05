@@ -323,9 +323,132 @@ const getInstructorStudents = async (req, res, next) => {
   }
 };
 
+// @desc    Get all completed courses for the logged-in student (progress = 100%)
+// @route   GET /api/enrolments/completed
+// @access  Private (Student)
+const getCompletedCourses = async (req, res, next) => {
+  try {
+    const studentId = req.user._id;
+    const Certificate = require('../models/Certificate');
+    const QuizAttempt = require('../models/QuizAttempt');
+
+    // 1. Fetch enrolments where progressPercentage >= 100
+    const enrolments = await Enrolment.find({
+      $or: [{ studentId }, { student: studentId }],
+      progressPercentage: { $gte: 100 },
+    })
+      .populate({
+        path: 'courseId',
+        select: 'title description thumbnail price level status instructorRef categoryRef averageRating totalReviews',
+        populate: [
+          { path: 'instructorRef', select: 'name email avatar' },
+          { path: 'categoryRef', select: 'name slug' },
+        ],
+      })
+      .sort({ updatedAt: -1, createdAt: -1 });
+
+    const completedList = await Promise.all(
+      enrolments.map(async (enrolment) => {
+        const course = enrolment.courseId;
+        if (!course) return null;
+
+        const cId = course._id;
+
+        // Count total lessons in course
+        const totalLessonsCount = await Lesson.countDocuments({ courseId: cId });
+        const completedLessonsCount = enrolment.completedLessons?.length || totalLessonsCount;
+
+        // Fetch student's submitted review for this course
+        const userReview = await Review.findOne({
+          courseId: cId,
+          $or: [{ studentId }, { student: studentId }],
+        }).select('rating comment createdAt updatedAt');
+
+        // Fetch certificate status for this course
+        const cert = await Certificate.findOne({
+          courseId: cId,
+          $or: [{ studentId }, { student: studentId }],
+        }).select('_id certificateId certificateUrl issueDate');
+
+        // Fetch quiz attempts stats for this course
+        const attempts = await QuizAttempt.find({
+          $or: [{ studentId }, { student: studentId }],
+          $or: [{ courseId: cId }],
+        });
+
+        let quizAvgScore = 0;
+        let quizzesPassedCount = 0;
+        if (attempts.length > 0) {
+          const sum = attempts.reduce((acc, curr) => acc + (curr.scorePercentage || 0), 0);
+          quizAvgScore = Math.round(sum / attempts.length);
+          quizzesPassedCount = attempts.filter((a) => a.passed).length;
+        }
+
+        return {
+          _id: enrolment._id,
+          course: {
+            _id: course._id,
+            title: course.title,
+            description: course.description,
+            thumbnail: course.thumbnail,
+            price: course.price,
+            level: course.level,
+            averageRating: course.averageRating || 0,
+            totalReviews: course.totalReviews || 0,
+            categoryName: course.categoryRef?.name || 'General',
+            instructorName: course.instructorRef?.name || 'Verified Instructor',
+            instructorAvatar: course.instructorRef?.avatar || '',
+            instructorEmail: course.instructorRef?.email || '',
+          },
+          completionDate: enrolment.updatedAt || enrolment.createdAt,
+          totalSecondsSpent: enrolment.totalSecondsSpent || 0,
+          progressPercentage: enrolment.progressPercentage || 100,
+          completedLessonsCount,
+          totalLessonsCount: totalLessonsCount || completedLessonsCount,
+          quizStats: {
+            avgScore: quizAvgScore,
+            totalAttempts: attempts.length,
+            passedCount: quizzesPassedCount,
+          },
+          certificate: cert
+            ? {
+                available: true,
+                id: cert._id,
+                certificateId: cert.certificateId,
+                url: cert.certificateUrl,
+                issueDate: cert.issueDate,
+              }
+            : { available: false },
+          userReview: userReview
+            ? {
+                _id: userReview._id,
+                rating: userReview.rating,
+                comment: userReview.comment,
+                createdAt: userReview.createdAt,
+                updatedAt: userReview.updatedAt,
+              }
+            : null,
+        };
+      })
+    );
+
+    const filtered = completedList.filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      count: filtered.length,
+      data: filtered,
+    });
+  } catch (error) {
+    if (typeof next === 'function') next(error);
+    else res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   enrolStudent,
   getMyEnrolments,
+  getCompletedCourses,
   getEnrolmentProgress,
   markLessonComplete,
   trackLearningTime,
