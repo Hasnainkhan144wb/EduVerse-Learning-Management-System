@@ -6,7 +6,6 @@ const {
   getPendingUsers,
   approveUserAccount,
   rejectUserAccount,
-  getAdminNotifications,
   getPlatformAnalytics,
   getFinancialReport,
   getUsersReport,
@@ -21,6 +20,15 @@ const {
   updateCourseStatus,
   getAdminCategories,
 } = require('../controllers/adminController');
+
+const {
+  getAdminNotifications,
+  getAdminUnreadCount,
+  markAdminNotificationRead,
+  markAllAdminNotificationsRead,
+  deleteAdminNotification,
+} = require('../controllers/adminNotificationController');
+
 const { requireAdmin } = require('../middleware/adminMiddleware');
 
 // Public Isolated Admin Login Route
@@ -29,7 +37,6 @@ router.post('/login', adminLogin);
 // Protected Admin Routes (Strictly Enforced by requireAdmin Middleware)
 router.get('/dashboard-stats', requireAdmin, getDashboardStats);
 router.get('/pending-users', requireAdmin, getPendingUsers);
-router.get('/notifications', requireAdmin, getAdminNotifications);
 router.get('/analytics', requireAdmin, getPlatformAnalytics);
 router.get('/reports/financial', requireAdmin, getFinancialReport);
 router.get('/reports/users', requireAdmin, getUsersReport);
@@ -45,5 +52,14 @@ router.delete('/users/:id', requireAdmin, deleteUser);
 router.get('/courses', requireAdmin, getAdminCourses);
 router.patch('/courses/:id/status', requireAdmin, updateCourseStatus);
 router.get('/categories', requireAdmin, getAdminCategories);
+
+// 🔔 ADMIN NOTIFICATION ENDPOINTS
+router.get('/notifications', requireAdmin, getAdminNotifications);
+router.get('/notifications/unread-count', requireAdmin, getAdminUnreadCount);
+router.patch('/notifications/read-all', requireAdmin, markAllAdminNotificationsRead);
+router.put('/notifications/read-all', requireAdmin, markAllAdminNotificationsRead);
+router.patch('/notifications/:id/read', requireAdmin, markAdminNotificationRead);
+router.put('/notifications/:id/read', requireAdmin, markAdminNotificationRead);
+router.delete('/notifications/:id', requireAdmin, deleteAdminNotification);
 
 module.exports = router;

@@ -313,6 +313,21 @@ const createCourse = async (req, res, next) => {
       $push: { createdCourses: course._id },
     });
 
+    // 🔔 Create Admin Notification for Course Approval Required
+    try {
+      const { createAdminNotification } = require('./adminNotificationController');
+      await createAdminNotification({
+        title: '📚 New Course Approval Required',
+        message: `Instructor ${req.user.name || 'An Instructor'} has submitted "${course.title}" for review.`,
+        type: 'course_approval',
+        relatedCourse: course._id,
+        relatedUser: req.user._id,
+        actionUrl: '/admin/courses',
+      });
+    } catch (notifErr) {
+      console.error('📢 Admin course notification error:', notifErr.message);
+    }
+
     res.status(201).json({
       success: true,
       data: course,

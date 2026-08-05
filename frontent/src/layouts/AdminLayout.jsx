@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import AdminNotificationBell from '../components/AdminNotificationBell';
 import api from '../services/api';
 import {
   FiGrid,
@@ -123,124 +124,8 @@ const AdminLayout = () => {
             {currentDateStr}
           </div>
 
-          {/* Real-Time Notification Bell & Dropdown */}
-          <div className="relative" ref={notifRef}>
-            <button
-              onClick={() => setNotifOpen(!notifOpen)}
-              className="relative p-2.5 bg-slate-800/90 hover:bg-slate-700 text-white rounded-xl border border-slate-700 transition flex items-center justify-center shadow-md focus:outline-none"
-              title="Notifications"
-            >
-              <FiBell className="w-4 h-4 text-white" />
-              {pendingUsers.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-slate-950 font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-900 animate-bounce shadow-md">
-                  {pendingUsers.length}
-                </span>
-              )}
-            </button>
-
-            {/* Notification Dropdown Panel */}
-            <AnimatePresence>
-              {notifOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute right-0 mt-3 w-80 sm:w-96 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl z-50 overflow-hidden"
-                >
-                  <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FiUserCheck className="text-amber-400 w-4 h-4" />
-                      <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">
-                        Pending Approvals ({pendingUsers.length})
-                      </h4>
-                    </div>
-                    <button
-                      onClick={() => fetchPendingNotifications()}
-                      className="text-[11px] text-blue-400 hover:text-blue-300 font-bold"
-                    >
-                      Refresh
-                    </button>
-                  </div>
-
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-800/80">
-                    {loadingNotifs && pendingUsers.length === 0 ? (
-                      <div className="p-6 text-center text-xs text-slate-400">
-                        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                        Checking pending requests...
-                      </div>
-                    ) : pendingUsers.length === 0 ? (
-                      <div className="p-8 text-center space-y-2">
-                        <FiClock className="w-8 h-8 text-slate-600 mx-auto" />
-                        <p className="text-xs font-bold text-slate-200">
-                          No pending user approval requests.
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          All student and instructor registrations are verified.
-                        </p>
-                      </div>
-                    ) : (
-                      pendingUsers.map((item) => (
-                        <div
-                          key={item._id}
-                          className="p-4 hover:bg-slate-800/50 transition flex items-start gap-3"
-                        >
-                          <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-500/30 overflow-hidden shrink-0 mt-0.5">
-                            {item.avatar ? (
-                              <img
-                                src={item.avatar}
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              item.name?.charAt(0) || 'U'
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <div className="flex items-center justify-between gap-1">
-                              <p className="text-xs font-bold text-white truncate">{item.name}</p>
-                              <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-[9px] font-bold uppercase">
-                                {item.role}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-400 truncate">{item.email}</p>
-                            <div className="flex items-center justify-between pt-1">
-                              <span className="text-[10px] text-slate-500 font-medium">
-                                {new Date(item.createdAt).toLocaleDateString()}
-                              </span>
-                              <button
-                                onClick={() => {
-                                  setNotifOpen(false);
-                                  navigate('/admin/users');
-                                }}
-                                className="text-[11px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                              >
-                                View Details <FiArrowRight className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {pendingUsers.length > 0 && (
-                    <div className="p-3 bg-slate-950 border-t border-slate-800 text-center">
-                      <button
-                        onClick={() => {
-                          setNotifOpen(false);
-                          navigate('/admin/users');
-                        }}
-                        className="text-xs font-bold text-blue-400 hover:text-blue-300 transition"
-                      >
-                        Manage All Users & Approvals →
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Real-Time Admin Notification Bell & Dropdown */}
+          <AdminNotificationBell />
 
           {/* Admin User Profile Tag */}
           <div className="flex items-center gap-2.5 border-l border-slate-800 pl-4">

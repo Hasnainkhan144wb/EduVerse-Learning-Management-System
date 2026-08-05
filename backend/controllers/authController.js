@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const { createAdminNotification } = require('./adminNotificationController');
 const generateToken = require('../utils/generateToken');
 
 // @desc    Register new user (Student / Instructor / Admin)
@@ -51,11 +52,23 @@ const registerUser = async (req, res) => {
 
     // 6. Create Admin Notification for non-Admin registrations
     if (!isInitialAdmin) {
-      await Notification.create({
-        title: `New ${userRole} Registration`,
-        message: `New ${userRole} Registration\n\n${name}\n\nEmail:\n${email}\n\nStatus:\nPending Verification`,
-        type: 'admin_alert',
-      });
+      if (userRole === 'Instructor') {
+        await createAdminNotification({
+          title: '👨‍🏫 New Instructor Registration',
+          message: `Instructor ${name} is waiting for account approval.`,
+          type: 'instructor_approval',
+          relatedUser: user._id,
+          actionUrl: '/admin/users',
+        });
+      } else {
+        await createAdminNotification({
+          title: '🎓 New Student Registered',
+          message: `Learner ${name} joined the platform.`,
+          type: 'student_registration',
+          relatedUser: user._id,
+          actionUrl: '/admin/users',
+        });
+      }
     }
 
     // 7. Generate Token
