@@ -92,7 +92,7 @@ app.use('/api/health', (req, res) => {
 app.use(express.static(path.join(__dirname, '../frontent/dist')));
 
 // Fallback catch-all route for React client-side routing
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontent/dist/index.html'));
 });
 
@@ -102,7 +102,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(
     `[EduVerse Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`
   );
