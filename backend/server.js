@@ -88,6 +88,14 @@ app.use('/api/health', (req, res) => {
   });
 });
 
+// Serve static frontend build files
+app.use(express.static(path.join(__dirname, '../frontent/dist')));
+
+// Fallback catch-all route for React client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontent/dist/index.html'));
+});
+
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);

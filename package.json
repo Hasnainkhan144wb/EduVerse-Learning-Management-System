@@ -1,9 +1,9 @@
 {
-    "name": "eduverse-root",
-    "version": "1.0.0",
-    "private": true,
-    "scripts": {
-        "start": "npm start --prefix backend",
-        "build": "npm run build --prefix backend || npm install --prefix backend"
-    }
+  "name": "eduverse-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npm start --prefix backend",
+    "build": "npm install --prefix frontent && npm run build --prefix frontent && npm install --prefix backend"
+  }
 }
