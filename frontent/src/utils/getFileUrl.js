@@ -12,10 +12,12 @@ export const getFileUrl = (filePath) => {
     return filePath;
   }
   // Clean path slashes
-  const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
-  const backendBase = import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace('/api', '')
-    : 'http://localhost:5000';
+  const rawBase =
+    (typeof import.meta !== 'undefined' &&
+      import.meta.env &&
+      (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL)) ||
+    '';
+  const backendBase = rawBase ? rawBase.replace(/\/api\/?$/, '') : '';
   return `${backendBase}${cleanPath}`;
 };
 

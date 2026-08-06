@@ -97,10 +97,7 @@ const StudentCertificates = () => {
   const handleDownloadPDF = async (cert) => {
     try {
       toast.loading('Preparing PDF download...', { id: 'download-pdf' });
-      const backendBase = import.meta.env.VITE_API_URL
-        ? import.meta.env.VITE_API_URL.replace('/api', '')
-        : 'http://localhost:5000';
-      const pdfUrl = `${backendBase}${cert.certificateUrl}`;
+      const pdfUrl = getFileUrl(cert.certificateUrl);
 
       // Open PDF asset in new window or trigger download link
       const link = document.createElement('a');

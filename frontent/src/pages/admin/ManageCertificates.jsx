@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { getFileUrl } from '../../utils/getFileUrl';
 import {
   FiAward,
   FiSearch,
@@ -264,7 +265,7 @@ const ManageCertificates = () => {
                   Close
                 </button>
                 <a
-                  href={`http://localhost:5000${previewCert.certificateUrl}`}
+                  href={getFileUrl(previewCert.certificateUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-600/30 flex items-center gap-2 transition"
