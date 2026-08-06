@@ -92,7 +92,7 @@ app.use('/api/health', (req, res) => {
 app.use(express.static(path.join(__dirname, '../frontent/dist')));
 
 // Fallback catch-all route for React client-side routing
-app.get('/*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontent/dist/index.html'));
 });
 
