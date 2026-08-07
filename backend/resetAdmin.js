@@ -29,6 +29,7 @@ const resetAdminAccount = async () => {
           email: 'admin@eduverse.com',
           password: hashedPassword,
           role: 'Admin',
+          status: 'Active',
           isApproved: true,
           updatedAt: new Date(),
         },
