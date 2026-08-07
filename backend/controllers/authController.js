@@ -79,6 +79,16 @@ const registerUser = async (req, res) => {
       { expiresIn: '30d' }
     );
 
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+    };
+
+    res.cookie('token', token, cookieOptions);
+
     const userPayload = {
       _id: user._id,
       name: user.name,
@@ -164,6 +174,16 @@ const loginUser = async (req, res) => {
     }
 
     const token = generateToken(user._id, user.role);
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+    };
+
+    res.cookie('token', token, cookieOptions);
 
     const userPayload = {
       _id: user._id,
@@ -409,6 +429,16 @@ const resetPassword = async (req, res) => {
     await user.save();
 
     const token = generateToken(user._id, user.role);
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+    };
+
+    res.cookie('token', token, cookieOptions);
 
     return res.status(200).json({
       success: true,

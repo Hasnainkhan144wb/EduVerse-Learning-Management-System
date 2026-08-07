@@ -34,6 +34,9 @@ connectDB();
 
 const app = express();
 
+// Trust reverse proxy (Railway, Heroku, Cloudflare, Nginx) for HTTPS secure cookies
+app.set('trust proxy', 1);
+
 // Security HTTP headers
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
