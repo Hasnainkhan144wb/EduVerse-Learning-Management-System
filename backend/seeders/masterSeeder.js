@@ -14,6 +14,7 @@ const Course = require('../models/Course');
 const Section = require('../models/Section');
 const Lesson = require('../models/Lesson');
 const Quiz = require('../models/Quiz');
+const QuizQuestion = require('../models/QuizQuestion');
 const Question = require('../models/Question');
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
@@ -36,6 +37,7 @@ const seedMasterData = async () => {
       Section.deleteMany({}),
       Lesson.deleteMany({}),
       Quiz.deleteMany({}),
+      QuizQuestion.deleteMany({}),
       Question.deleteMany({}),
       Assignment.deleteMany({}),
       Submission.deleteMany({}),
@@ -305,29 +307,29 @@ const seedMasterData = async () => {
       passingScore: 80,
     });
 
-    const q1 = await Question.create({
+    const q1 = await QuizQuestion.create({
       quizId: quiz1._id,
       questionText: 'Which HTTP method is typically used to create a new user resource in a REST API?',
-      type: 'MCQ',
       options: ['GET', 'POST', 'PUT', 'DELETE'],
+      correctOption: 1,
       correctAnswers: 'POST',
       explanation: 'POST requests create new resources in REST standard guidelines.',
     });
 
-    const q2 = await Question.create({
+    const q2 = await QuizQuestion.create({
       quizId: quiz1._id,
       questionText: 'MongoDB is a relational SQL database. (True or False)',
-      type: 'TrueFalse',
       options: ['True', 'False'],
+      correctOption: 1,
       correctAnswers: 'False',
       explanation: 'MongoDB is a NoSQL document database.',
     });
 
-    const q3 = await Question.create({
+    const q3 = await QuizQuestion.create({
       quizId: quiz1._id,
       questionText: 'What middleware is used to verify JSON Web Tokens in Express routes?',
-      type: 'MCQ',
       options: ['cors', 'helmet', 'protect / requireAuth', 'morgan'],
+      correctOption: 2,
       correctAnswers: 'protect / requireAuth',
       explanation: 'Custom JWT protect middleware extracts bearer tokens and validates user signatures.',
     });
