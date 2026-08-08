@@ -80,12 +80,11 @@ const registerUser = async (req, res) => {
     );
 
     const isProduction = process.env.NODE_ENV === 'production';
-    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const cookieOptions = {
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: isProduction || isHttps,
-      sameSite: isProduction || isHttps ? 'none' : 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     };
 
     res.cookie('token', token, cookieOptions);
@@ -177,12 +176,11 @@ const loginUser = async (req, res) => {
     const token = generateToken(user._id, user.role);
 
     const isProduction = process.env.NODE_ENV === 'production';
-    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const cookieOptions = {
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: isProduction || isHttps,
-      sameSite: isProduction || isHttps ? 'none' : 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     };
 
     res.cookie('token', token, cookieOptions);
@@ -433,12 +431,11 @@ const resetPassword = async (req, res) => {
     const token = generateToken(user._id, user.role);
 
     const isProduction = process.env.NODE_ENV === 'production';
-    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const cookieOptions = {
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: isProduction || isHttps,
-      sameSite: isProduction || isHttps ? 'none' : 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     };
 
     res.cookie('token', token, cookieOptions);
