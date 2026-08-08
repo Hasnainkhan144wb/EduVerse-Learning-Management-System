@@ -14,6 +14,8 @@ const api = axios.create({
   withCredentials: true,
 });
 
+api.defaults.withCredentials = true;
+
 // Request Interceptor: Attach JWT token from localStorage to headers
 api.interceptors.request.use(
   (config) => {
