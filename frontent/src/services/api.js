@@ -19,7 +19,7 @@ api.defaults.withCredentials = true;
 // Request Interceptor: Attach JWT token from localStorage to headers
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,6 +41,8 @@ api.interceptors.response.use(
       // Clear expired auth session
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminUser');
 
       // Dispatch custom auth-error event if needed by Context
       window.dispatchEvent(new Event('auth-error'));
